@@ -37,6 +37,7 @@ export async function requireCustomer(): Promise<Session>       // HttpError 401
 export async function requireApiKey(req: Request): Promise<{ tenantId: string; keyId: string }> // HttpError 401
 export function hashApiKey(key: string): string                 // sha256 hex
 export function generateApiKey(): { key: string; prefix: string; keyHash: string }  // 'af_' + 24 random bytes hex
+export async function assertActiveCustomer(tenantId: string, userId: string): Promise<{ name; email; isDemo }>  // HttpError 403 unless an active user of that tenant
 export async function verifyPassword(plain: string, hash: string): Promise<boolean>
 ```
 `JWT_SECRET` comes from `env()`, with no fallback. `middleware.ts` (or `proxy.ts`, if the installed Next.js version deprecates `middleware.ts`) redirects `/admin/*` (except `/admin/login`) to `/admin/login` when there's no valid admin session. It uses `jose` directly and has to tolerate a missing `JWT_SECRET` at build time by treating the user as signed out.

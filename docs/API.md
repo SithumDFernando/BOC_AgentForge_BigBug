@@ -43,7 +43,7 @@ Body `{ "company": "walkwave" | "nova", "customerId": string }`.
 Body `{ "message": string, "history": [{ "role": "user"|"assistant", "content": string }], "requestId": string, "expectedCustomerId"?: string }`.
 
 Errors before the stream starts are returned as JSON:
-- `401` no customer session. `409 { "error": "Your account changed in another tab. Select your customer again." }` if `expectedCustomerId` ≠ the session userId. `400` validation error. `429` rate limited.
+- `401` no customer session. `409 { "error": "Your account changed in another tab. Select your customer again." }` if `expectedCustomerId` ≠ the session userId. `400` validation error. `429` rate limited. `403` if the session's customer is no longer an active user of its tenant.
 
 Otherwise `200`, `Content-Type: text/event-stream`. Each event is `data: <json>\n\n`:
 

@@ -105,3 +105,12 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
     return false;
   }
 }
+
+// The customer must still be an active user of this tenant (a session or an API-key caller may name a stale one).
+export async function assertActiveCustomer(tenantId: string, userId: string): Promise<{ name: string; email: string; isDemo: boolean }> {
+  const denied = new HttpError(403, 'Customer is not authorized for this company.');
+  if (!userId || userId.includes('/') || userId.length > 200) throw denied;
+  const doc = await db().collection('users').doc(userId).get();
+  if (!doc.exists || doc.get('tenantId') !== tenantId || doc.get('isActive') !== true) throw denied;
+  return { name: String(doc.get('name') ?? ''), email: String(doc.get('email') ?? ''), isDemo: doc.get('isDemo') === true };
+}
