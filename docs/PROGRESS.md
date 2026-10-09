@@ -9,7 +9,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M0 Scaffold | done | n/a (no secrets needed) |
 | M1 Auth, data, seed | done (offline) | **no**: no `.env.local` yet |
 | M2 Knowledge | done (offline) | **no** |
-| M3 Chat core | not started | — |
+| M3 Chat core | in progress | — |
 | M4 Enterprise API | not started | — |
 | M5 Admin features | not started | — |
 | M5b Cloud Run, monitoring, recovery | not started | — |
@@ -32,6 +32,7 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M3.1 done. `lib/guardrails.ts`: the injection patterns from MODULES.md, PII scrubbing (card, email, phone), `extractEmail`. A phone match must have 9–15 digits, so dates like `2026-10-13` stay unredacted. `guardrails.test.ts`: 13 tests.
 - 2026-10-10: M2.4 done; **M2 exit (offline) passed.** The seed indexes `data/walkwave/policies.md` and `data/nova/policies.md` through `indexDocument` with the fixed ids `demo_walkwave_policy` / `demo_nova_policy` (re-runs replace the chunks), and its env check now also requires the embedding provider's variables. `npm run check` passes (36 tests). The live upload is under "Needs live verification".
 - 2026-10-10: M2.3 done. `/api/admin/documents` GET/POST/DELETE (admin only, tenant from the session, 4 MB request guard, title ≤ 200 characters defaulting to the filename, `maxDuration` 60). Checked on the dev server: 401 without a session; with an admin token, `.png` → 400 "Please upload a PDF or TXT file.", an empty file → 400, a bad id → 400; `Walkwave_Policies.pdf` parsed and then failed at Firestore with a generic 500 (no credentials, see Blockers).
 - 2026-10-10: M2.2 done. `lib/knowledge.ts`: lazy PDF parsing (unreadable PDF → 400), chunking, `indexDocument` (embed first so a failure writes nothing; replaces old chunks of a fixed id; refuses another tenant's id; rolls back chunks if the document write fails), `listDocuments`, `deleteDocument` (document first, then chunks), `searchKnowledge` with a tenant-filtered cosine `findNearest` (distance ≤ 0.8, indexed docs only; logs a hint if the vector index is missing). `knowledge.test.ts`: 12 tests on an in-memory Firestore fake. A real `findNearest` needs the vector index (THIRD_PARTY_SETUP §2.7).
