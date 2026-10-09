@@ -24,10 +24,12 @@ _None yet._
 
 _Items built and unit-tested but not yet run against real Firebase/OpenAI/SMTP._
 
+- M1.5: `npm run seed` twice against real Firestore (the second run should report only `updated`).
 - M1.4: successful admin login, the session route with a real account, and demo login against seeded users (needs Firestore).
 
 ## Log
 
+- 2026-10-10: M1.5 done. `scripts/seed.ts` seeds tenants, admins, demo customers, the 4 orders and `api_keys/nova_demo_key`. Fixed IDs, `set` with merge, never deletes. `createdAt`, and the key's `usageCount`/`lastUsed`, are written only on first create, so re-seeding doesn't reset usage (D16). Policy documents are added in M2.4, once `lib/knowledge.ts` exists. The Nova admin name is "Nova Manager" (not specified; mirrors Walkwave). Checked: a missing env stops with a list of names; with fake env it reaches the Firestore connection, which shows the imports and `@/` alias resolve under tsx; no secret value is printed.
 - 2026-10-10: M1.4 done. `POST /api/auth/admin-login` (10/min per IP, the same 401 for an unknown email, a wrong password or an inactive account, with a dummy bcrypt compare for unknown emails to equalize timing), `POST /api/auth/logout`, `GET /api/auth/session` (re-checks that the account exists, is active and matches the tenant; `no-store`), `POST /api/demo/login`. Added `readJson` (400 on malformed JSON) and `clientIp` to `lib/http.ts`. Checked in dev without Firestore: validation 400s, the demo gate 403, the rate limit 429, `{ user: null }` with no cookie, and a generic 500 when the database is unreachable.
 - 2026-10-10: M1.3 done. `proxy.ts` (Next 16 deprecates `middleware.ts`) redirects `/admin` and `/admin/*` except `/admin/login` when there's no valid admin JWT. Checked in dev with a throwaway shell `JWT_SECRET`: no cookie, a garbage cookie and a customer session → 307 to `/admin/login`; an admin token → 200; `/admin/login` → 200.
 - 2026-10-10: M1.2 done. `lib/auth.ts` per MODULES.md, plus `signSession`/`verifySession` (shared by `getSession`) and `hashPassword` (bcrypt cost 10, used by the seed). `requireApiKey` accepts any bearer token shape and validates only by sha256 lookup + `isActive`, because the docs don't fix the format of `NOVA_DEMO_API_KEY` (D15). `auth.test.ts` covers the required cases, plus role checks, a missing `JWT_SECRET` and API-key lookup with a mocked db.

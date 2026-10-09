@@ -46,3 +46,6 @@ Local `npm start` is the primary demo environment. Cloud Run in the same Firebas
 
 ### D15. API-key auth accepts any bearer token shape (agent decision, M1.2)
 Generated keys are always `af_` + 48 hex, but `NOVA_DEMO_API_KEY` is created by a human from `.env.example`, which only says "long random value". `requireApiKey` therefore accepts any 8–200 character bearer token and authorizes only on an exact sha256 hash match with `isActive: true`. Rejecting by format would add no security (an unknown hash already fails) and would break the demo for a key in another format.
+
+### D16. The seed preserves counters and creation times (agent decision, M1.5)
+TASKS.md lists `usageCount: 0, lastUsed: null, createdAt` for the Nova key and also requires a safe, repeatable seed. A plain merge would reset the key's usage (and the dashboard's real numbers) on every run. Those fields, and `createdAt` on every seeded doc, are written only when the document doesn't exist. Every other field is merged each run, so rotating a password or `NOVA_DEMO_API_KEY` in `.env.local` and re-seeding updates the hash.
