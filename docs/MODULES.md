@@ -80,18 +80,18 @@ export type ToolSpec = { name: string; description: string; parameters: Record<s
 export type ToolCall = { id: string; name: string; args: unknown }
 export type Turn =
   | { role: 'user' | 'assistant'; text: string }
-  | { role: 'assistant'; toolCalls: ToolCall[] }
+  | { role: 'assistant'; toolCalls: ToolCall[]; raw?: { provider; content } }   // raw = the provider's own content, replayed verbatim (Gemini thought signatures)
   | { role: 'tool'; callId: string; name: string; result: unknown }
 export class LlmUnavailableError extends Error {}
 export async function generate(i: { system: string; turns: Turn[]; tools?: ToolSpec[] }): Promise<{ text: string; toolCalls: ToolCall[]; tokens: number; provider: 'vertex' | 'openai' }>
-export async function embed(texts: string[]): Promise<number[][]>   // batched, same order as the input, 768 numbers each
+export async function embed(texts: string[], task?: 'document' | 'query'): Promise<number[][]>   // batched, same order as the input, 768 numbers each
 ```
 - The **only** file that imports `@google/genai` or `openai` (D21). Providers are created lazily and memoized.
 - `LLM_PROVIDER` (`vertex` | `openai`, required) is the primary for both functions.
   - `vertex`: `new GoogleGenAI({ vertexai: true, project: env('GOOGLE_CLOUD_PROJECT'), location: env('VERTEX_LOCATION') })`. Chat model `env('VERTEX_MODEL')`. Embeddings `env('VERTEX_EMBEDDING_MODEL')` with `outputDimensionality: 768`. Credentials are Application Default Credentials: the Cloud Run service account, or `gcloud auth application-default login` locally.
   - `openai`: `env('OPENAI_API_KEY')`, `env('OPENAI_MODEL')`, and `env('OPENAI_EMBEDDING_MODEL')` with `dimensions: 768`.
-- `generate`: temperature 0.2, at most 400 output tokens, 20 s timeout, 1 retry on 429/5xx/timeout. Tool specs map to Gemini `functionDeclarations` or OpenAI `tools` (type `function`). Tool results go back as Gemini `functionResponse` parts or OpenAI `role: 'tool'` messages. `tokens` is the provider's total token count. If the primary still fails and `optionalEnv('LLM_FALLBACK') === 'openai'` with `OPENAI_API_KEY` set, try OpenAI once. Otherwise throw `LlmUnavailableError` (the chat router catches it, D22).
-- `embed`: batches of 50, 1 retry, never falls back (vectors from two models aren't comparable). It throws if a vector's length isn't 768.
+- `generate`: temperature 0.2 (Vertex only; some OpenAI mini models accept only the default), at most 1024 output tokens (D29), 20 s timeout, 1 retry on 429/5xx/timeout. Tool specs map to Gemini `functionDeclarations` or OpenAI `tools` (type `function`). Tool results go back as Gemini `functionResponse` parts or OpenAI `role: 'tool'` messages. `tokens` is the provider's total token count. If the primary still fails and `optionalEnv('LLM_FALLBACK') === 'openai'` with `OPENAI_API_KEY` set, try OpenAI once. Otherwise throw `LlmUnavailableError` (the chat router catches it, D22).
+- `embed`: batches of 50 (1 for `gemini-embedding*` models, which take one input per request), task type `RETRIEVAL_DOCUMENT` / `RETRIEVAL_QUERY` on Vertex, 1 retry, never falls back (vectors from two models aren't comparable). It throws if a vector's length isn't 768.
 
 ## `lib/tools.ts`
 ```ts

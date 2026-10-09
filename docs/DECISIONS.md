@@ -94,3 +94,6 @@ Taken from the idea in the old repo's commit `122bfa4`, not its code: that code 
 
 ### D28. Round 1 divergences are explained, not rebuilt
 Apigee, Memorystore, Pub/Sub approvals, BigQuery, Cloud Trace, six separate services and per-tenant indexes stay in the Target architecture. [PITCH.md](PITCH.md) has the table of each change and its reason, and the list of Round 1 estimates we corrected.
+
+### D29. Model output cap is 1024 tokens, not 400 (agent decision, M2.1)
+Current Gemini Flash and OpenAI "mini" models can spend output tokens on internal reasoning before the visible answer, so a 400-token cap risks empty or cut-off replies. The cap is 1024; reply length is kept short by the prompts ("at most 4 short sentences"). For the same reason no temperature is sent to OpenAI, because some mini models reject anything but the default.

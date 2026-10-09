@@ -8,7 +8,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 |---|---|---|
 | M0 Scaffold | done | n/a (no secrets needed) |
 | M1 Auth, data, seed | done (offline) | **no**: no `.env.local` yet |
-| M2 Knowledge | not started | — |
+| M2 Knowledge | in progress | — |
 | M3 Chat core | not started | — |
 | M4 Enterprise API | not started | — |
 | M5 Admin features | not started | — |
@@ -31,6 +31,7 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M2.1 done. `lib/log.ts` (structured JSON logs, `recordAction`) and `lib/llm.ts`: Vertex AI via `@google/genai` 2.28 (new dependency, D21) and OpenAI, tool calls in both provider formats, Gemini's raw content replayed for thought signatures, 1 retry on 429/5xx/network, OpenAI fallback for `generate` only, 768-dim embeddings with batching and a length check. Output cap 1024 tokens (D29). `lib/env.ts` gained the Vertex names. `llm.test.ts`: 10 tests with mocked SDKs. Not yet run against real Vertex AI (needs a project).
 - 2026-10-10: **Plan changes approved by the team and applied to the docs.** Cloud Run becomes P0 as M5b (D20, reverses D12; GCP over the AWS credits). Vertex AI Gemini is the model, with OpenAI as an optional fallback (D21). The model gets four scoped tools, with the deterministic rules kept as degraded mode (D22, reverses D5). Firestore vector search (D23), structured logs (D24), PITR and daily backups on (D25), PDPA as a mapped target (D26), the embeddable widget as F12/M5c (D27), and the Round 1 divergences explained in the new `docs/PITCH.md` (D28). SPEC F1, F3–F5, F7 and F10–F12, SECURITY rules 1, 2, 5, 7 and 10–12 and the PDPA mapping, ARCHITECTURE, MODULES, API, TASKS, TESTING, THIRD_PARTY_SETUP, DEMO_RUNBOOK, CLAUDE.md, README and `.env.example` were updated. Committed `.gitignore` (`*_private.md`).
 - 2026-10-10: Second re-sync with the old repo (`9f06ce9`, 2 commits). Took `app/globals.css` (light-theme readability fix). Did not port the embeddable website widget from `122bfa4`: it's out of scope in SPEC and its server code conflicts with SECURITY rule 4 and D10; recorded in MIGRATION.md as pending a scope decision. `npm run check` passes.
 - 2026-10-10: **Re-synced the frontend and docs with the old repo** (`BOC-2.0` at `c2d0621`, 11 new commits). Re-copied the public pages, `NavHeader`, the storefront, chat panel and CSS, the admin escalations page and `next.config.ts` (PDF worker packaging); deleted `/demo` and the now-unused `AnimatedShader`. Not ported: `demoEnabled()` always `true`, the plain-text Nova key read from Firestore, the Vercel URL fallback, and the "Recorded Chats" relabel (MIGRATION.md has the table). New decisions D17 (no Vercel; D12 unchanged), D18 (Walkwave auto demo session, `ENABLE_DEMO` gate kept), D19 (Nova key from env only). Updated UI, SPEC (F2 box and demo script, for the removed Walkwave picker), API (demo-login callers, escalation fields), MODULES, ARCHITECTURE, TASKS, TESTING, SECURITY (known limitation only), DEMO_RUNBOOK, THIRD_PARTY_SETUP, MIGRATION, README, CLAUDE.md and `.env.example`. Four lint errors in the copied escalations page got D14-style fixes. `npm run check` passes; the forbidden-claims grep prints nothing. No new dependency: the PDF worker's `@napi-rs/canvas` comes with `pdf-parse`.
