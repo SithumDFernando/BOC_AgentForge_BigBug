@@ -1,6 +1,6 @@
 # AgentForge
 
-AI customer support that companies plug in two ways: a ready-made chat widget, or their own interface calling our API. The assistant answers from the company's uploaded policies, looks up only the signed-in customer's orders, emails updates on request, and sends risky requests (large refunds) to a human manager.
+AI customer support that companies plug in three ways: a ready-made chat widget, one script tag on their own website, or their own interface calling our API. The assistant (Gemini on Vertex AI) uses four server-checked tools: it answers from the company's uploaded policies, looks up only the signed-in customer's orders, emails updates on request, and sends risky requests (large refunds) to a human manager. Built to run on Google Cloud Run with Firestore.
 
 Built for the **Beauty of Cloud 2.0** final. It is a working prototype with fictional companies (Walkwave, Nova Electronics) and sample data. Database reads, document indexing, AI answers, emails and manager tickets are real; payments are simulated.
 
@@ -10,13 +10,17 @@ Built for the **Beauty of Cloud 2.0** final. It is a working prototype with fict
 cp .env.example .env.local   # fill in values, see docs/THIRD_PARTY_SETUP.md
 gcloud auth application-default login   # Firestore and Vertex AI credentials
 npm install
-npm run seed
+npm run seed                 # needs the Firestore vector index (THIRD_PARTY_SETUP §2)
 npm run dev                  # http://localhost:3000
+npm run verify               # live checks against BASE_URL (default http://localhost:3000)
+npm run widget-site          # a test "company website" on :4000 embedding the widget
 ```
+
+Deploying to Cloud Run: [docs/THIRD_PARTY_SETUP.md](docs/THIRD_PARTY_SETUP.md) §5. Build status and what still needs a human: [docs/PROGRESS.md](docs/PROGRESS.md).
 
 - Walkwave (chat widget; opening it signs in the demo customer Jane): http://localhost:3000/walkwave
 - Nova (custom UI via API): http://localhost:3000/nova
-- Admin portal: http://localhost:3000/admin/login
+- Admin portal: http://localhost:3000/admin/login (Website widget settings under Admin → Website widget)
 
 ## Docs
 

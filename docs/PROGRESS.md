@@ -16,7 +16,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M5c Website widget (P1) | done (offline) | **no** |
 | M6 UI edits | done | n/a |
 | M7 Public pages truth pass | done | n/a |
-| M8 Verification | in progress | — |
+| M8 Verification | done except M8.3 (live, blocked) | **no** |
 
 ## Blockers
 
@@ -45,6 +45,7 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M8.4 done (README quick start: Vertex AI/Cloud Run summary, `verify`, `widget-site`, deploy pointer). **Not tagged `demo-ready`**: M8.3 (seed → build → verify, locally and on Cloud Run, then `--send-email`) is blocked on credentials (see Blockers and Needs a human). **The offline build is complete through M8**: `npm run check` passes with 115 unit tests.
 - 2026-10-10: M8.2 done (security pass). Every `route.ts` starts with `requireAdmin`/`requireCustomer`/`requireApiKey`/`requireWidget` or is a listed SECURITY rule 2 exception doing its own demo/origin check; `GET /api/escalation/[id]` checks the session itself (D30). No secret has a fallback (the only env default is `BASE_URL` in the verify script). Clients never get provider error text: the frame route returns only our own `HttpError` messages, and tools return error codes to the model. None of the "must NOT exist" routes exist, no file imports the Firebase client SDK, and only `lib/llm.ts` imports a model SDK.
 - 2026-10-10: M8.1 done. `scripts/verify.ts` implements TESTING.md cases 1–28: a cookie jar per actor, SSE parsing, PASS/FAIL/SKIP, and exit 1 on any failure. Case 24 runs only with `--send-email`; widget cases 25–28 SKIP if `/api/widget/config` returns 404. They use `BASE_URL`'s origin, which the seed allows for `tnt_nova` when `APP_BASE_URL` matches. Against the dev server without Firestore, cases 1–4 pass and the run stops at sign-in with a clear message. The full run needs a seeded database.
 - 2026-10-10: M7.2 done; **M7 exit passed.** The forbidden-claims grep prints nothing; no page names Vertex AI, Cloud Run or any other target service, PDPA, or "compliant", so there's nothing to Target-label. The "Where it runs" list on `/architecture` waits until Cloud Run is live. `/`, `/security`, `/docs`, `/architecture`, `/login`, `/pricing` all render 200.
