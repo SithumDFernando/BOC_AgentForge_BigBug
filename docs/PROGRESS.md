@@ -26,6 +26,7 @@ _Items built and unit-tested but not yet run against real Firebase/OpenAI/SMTP._
 
 ## Log
 
+- 2026-10-10: M0.3 done. The copied UI imports no server module (only `lib/demo-config.ts`), so throwaway stubs weren't needed. Wrote the real `lib/env.ts`, `lib/http.ts` and `lib/db.ts` (lazy firebase-admin, no import-time env reads) instead. `lib/auth.ts` lands in M1.2.
 - 2026-10-10: M0.2 done. `vitest.config.ts` (node env, `@` alias, `lib/**/*.test.ts`). Added `passWithNoTests` so `npm run check` passes before the first test file exists.
 - 2026-10-10: M0.1 done. Installed `openai`, `firebase-admin`, `vitest`, `tsx`. Bumped `@types/node` to ^22 for vitest's peer range (D13). Fixed 8 lint errors in copied UI with minimal edits (D14). No `.env.local` in the repo, so live checks will be marked "needs live verification".
 - 2026-10-10: Repo created. Specs written. UI copied from the old repo (see [UI.md](UI.md)). No server code yet.
