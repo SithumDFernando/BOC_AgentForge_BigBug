@@ -11,7 +11,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M2 Knowledge | done (offline) | **no** |
 | M3 Chat core | done (offline) | **no** |
 | M4 Enterprise API | done (offline) | **no** |
-| M5 Admin features | not started | — |
+| M5 Admin features | done (offline) | **no** |
 | M5b Cloud Run, monitoring, recovery | not started | — |
 | M5c Website widget (P1) | not started | — |
 | M6 UI edits | not started | — |
@@ -27,6 +27,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 _Items built and unit-tested but not yet run against real Firestore, Vertex AI or SMTP._
 
 - M1.5: `npm run seed` twice against real Firestore (the second run should report only `updated`).
+- M5: reject a ticket in admin → Jane's bubble shows "rejected" within 5 seconds; create/list/revoke an API key; dashboard numbers from real records.
 - M4: the Nova page as Alice shows NV-1001 and the raw JSON panel shows the `trace`; key usage counter increments.
 - M3: the Walkwave bubble answering the policy, order, not-found, injection and refund questions, in agent mode and with `AGENT_TOOLS=off`.
 - M2: `npm run seed` indexing both policies (needs the vector index), and uploading `public/demo/Walkwave_Policies.pdf` in the admin UI → indexed.
@@ -34,6 +35,9 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M5.3 done; **M5 exit (offline) passed.** `GET /api/admin/stats`: Firestore `count()` for users, documents and escalations and `AggregateField.sum('tokens')` over `chat_history`, all tenant-scoped.
+- 2026-10-10: M5.2 done. `/api/admin/api-keys`: GET (active keys, the prefix as `key`, seed Timestamps converted to ISO), POST (name 1–80, only hash + prefix stored, the full key returned once), DELETE (revoke, 404 for another tenant). Actions recorded.
+- 2026-10-10: M5.1 done. `GET /api/escalation` (status pending/approved/rejected, else 400; a mismatched `tenantId` → 403) and `PATCH` (decision validated, note ≤ 1000 characters, transactional decide, 404/409). Dev-server checks for all three M5 routes: 401 anonymous, 403 cross-tenant, 400 on bad status, decision, name or id.
 - 2026-10-10: M4.2 done; **M4 exit (offline) passed.** `POST /api/demo/enterprise-chat`: Nova customers only (401 otherwise), 409 on a stale customer, input validated before forwarding, key from `NOVA_DEMO_API_KEY` only (503 if unset), `APP_BASE_URL` required, 50 s timeout, `cache: 'no-store'`, upstream status and JSON passed through, 502 on a network failure. Checked on the dev server: 401 for a Walkwave session, 409, and 502 with nothing listening at `APP_BASE_URL`.
 - 2026-10-10: M4.1 done. `POST /api/v1/chat`: the key looked up by hash, 30/min per key, `customerId` accepted only as an active user of the key's tenant (403), the same JSON as the SSE `result` (with `trace`, without `tokens`), and `usageCount`/`lastUsed` updated best effort. Checked: 401 without a key and with an unknown key.
 - 2026-10-10: M3.5 done; **M3 exit (offline) passed.** `POST /api/chat`: one-shot SSE (`agent` events as actions happen, then `text`, then `result` with `trace`; `error` on failure; `tokens` not exposed), a 409 on a stale `expectedCustomerId`, a 30/min limit per customer, and a new `assertActiveCustomer` check (403 for a disabled customer; added to `lib/auth.ts`, API.md and MODULES.md). `GET /api/escalation/[id]`: the owner or an admin of the same tenant, otherwise 404. Dev-server checks: 401 anonymous, 409 on a stale customer, 400 for an empty message or bad JSON, a generic 500 when Firestore is unreachable. `npm run check` passes (92 tests).
