@@ -97,3 +97,6 @@ Apigee, Memorystore, Pub/Sub approvals, BigQuery, Cloud Trace, six separate serv
 
 ### D29. Model output cap is 1024 tokens, not 400 (agent decision, M2.1)
 Current Gemini Flash and OpenAI "mini" models can spend output tokens on internal reasoning before the visible answer, so a 400-token cap risks empty or cut-off replies. The cap is 1024; reply length is kept short by the prompts ("at most 4 short sentences"). For the same reason no temperature is sent to OpenAI, because some mini models reject anything but the default.
+
+### D30. `GET /api/escalation/[id]` checks the session itself (agent decision, M8.2)
+SECURITY rule 2 asks for a `require*` helper first, but this route serves two roles: the customer who owns the ticket (the chat panel polls it) and an admin of the same tenant. It calls `getSession()`, returns 401 when there's none, then 404 unless the tenant matches and the caller is an admin or the owner. Adding a `requireCustomerOrAdmin` helper for one route would add code without changing behavior.
