@@ -119,6 +119,7 @@ The four tools (D22). **No tool takes `tenantId`, `customerId`, `userId` or an e
 export async function extractText(file: File): Promise<string>
 export function chunkText(text: string): string[]
 export async function indexDocument(i: { tenantId; adminId; title; filename; fileSize; text; docId?: string }): Promise<DocumentSummary>
+export async function listDocuments(tenantId: string): Promise<DocumentSummary[]>   // indexed only, newest first
 export async function deleteDocument(tenantId: string, docId: string): Promise<void>
 export async function searchKnowledge(tenantId: string, question: string): Promise<{ text: string; sources: string[] }>
 ```
