@@ -4,7 +4,7 @@ import { loadEnvConfig } from '@next/env';
 
 loadEnvConfig(process.cwd());
 
-const REQUIRED = ['FIREBASE_PROJECT_ID', 'WALKWAVE_ADMIN_PASSWORD', 'NOVA_ADMIN_PASSWORD', 'NOVA_DEMO_API_KEY'];
+const REQUIRED = ['APP_BASE_URL', 'FIREBASE_PROJECT_ID', 'WALKWAVE_ADMIN_PASSWORD', 'NOVA_ADMIN_PASSWORD', 'NOVA_DEMO_API_KEY'];
 
 // The seed indexes the policy documents, so it needs the embedding provider too.
 const EMBEDDING_ENV: Record<string, string[]> = {
@@ -84,6 +84,14 @@ async function main() {
   await upsert('api_keys/nova_demo_key', {
     tenantId: 'tnt_nova', name: 'Nova server integration', keyHash: hashApiKey(novaKey), prefix: novaKey.slice(0, 7), isActive: true,
   }, { usageCount: 0, lastUsed: null, ...created });
+
+  // Widget (F12): only when Nova has no widget config yet, so an admin's later changes survive re-seeding.
+  const nova = db().doc('tenants/tnt_nova');
+  if (!(await nova.get()).get('widget')) {
+    const origins = [...new Set([new URL(env('APP_BASE_URL')).origin, 'http://localhost:4000'])];
+    await nova.set({ widget: { enabled: true, name: 'Nova Assistant', color: '#3159cc', allowedOrigins: origins } }, { merge: true });
+    summary.push('created  tenants/tnt_nova.widget');
+  }
 
   // Fixed ids, so re-running replaces the chunks instead of adding new ones.
   const policies = [

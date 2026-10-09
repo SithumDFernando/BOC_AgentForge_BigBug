@@ -13,7 +13,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M4 Enterprise API | done (offline) | **no** |
 | M5 Admin features | done (offline) | **no** |
 | M5b Cloud Run, monitoring, recovery | files ready; **waiting on a human** | **no** |
-| M5c Website widget (P1) | in progress | — |
+| M5c Website widget (P1) | done (offline) | **no** |
 | M6 UI edits | not started | — |
 | M7 Public pages truth pass | not started | — |
 | M8 Verification | not started | — |
@@ -36,6 +36,7 @@ _Steps that need `gcloud`, a billing account or a console (TASKS.md protocol rul
 _Items built and unit-tested but not yet run against real Firestore, Vertex AI or SMTP._
 
 - M1.5: `npm run seed` twice against real Firestore (the second run should report only `updated`).
+- M5c: `npm run widget-site` → on `localhost:4000` the bubble appears, a guest gets a policy answer, Alice (via the site's own token endpoint) gets NV-1001, and an unlisted origin is refused.
 - M5: reject a ticket in admin → Jane's bubble shows "rejected" within 5 seconds; create/list/revoke an API key; dashboard numbers from real records.
 - M4: the Nova page as Alice shows NV-1001 and the raw JSON panel shows the `trace`; key usage counter increments.
 - M3: the Walkwave bubble answering the policy, order, not-found, injection and refund questions, in agent mode and with `AGENT_TOOLS=off`.
@@ -44,6 +45,7 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M5c.4 done; **M5c exit (offline) passed.** The seed writes `tenants/tnt_nova.widget` (enabled, "Nova Assistant", `#3159cc`, origins = the `APP_BASE_URL` origin + `http://localhost:4000`) only when no widget config exists, so admin edits survive re-seeding; `APP_BASE_URL` is now required by the seed. `npm run widget-site` (`scripts/widget-site.ts`) serves a fictional partner page on port 4000 that embeds `widget.js` cross-origin. `/` plays a company backend (its `/api/support/widget-token` calls `POST /api/widget/session` with `NOVA_DEMO_API_KEY` for Alice); `/guest` is anonymous. Checked: both pages serve, the snippet points at `APP_BASE_URL`, and the token endpoint proxies to AgentForge (401 here without a real key).
 - 2026-10-10: M5c.3 done. `public/widget.js` and `public/widget/frame.css` from the old repo (`122bfa4`) unchanged: the loader takes its host from its own `src`, so nothing is hard-coded. `public/widget/frame.js` reads our `adminNote` and labels `guardrailBlocked`. New `app/admin/widget/page.tsx` (adapted from the old `WidgetSettings.tsx`) and a "Website widget" sidebar item. UI.md lists the files and a pending docs-page section (`/docs#widget`). Both static scripts serve 200 on the dev server.
 - 2026-10-10: M5c.2 done. Widget routes: `/widget/frame` (HTML with a CSP whose `frame-ancestors` is the allowed origins; a refusal is plain text with `frame-ancestors 'none'`), `/api/widget/config` (CORS for the allowed origin only), `/api/widget/bootstrap` (anonymous token, 20/min per IP), `/api/widget/session` POST (API key → customer token) and GET (the frame checks a token; added to API.md), `/api/widget/chat`, `/api/widget/escalation`, `/api/demo/widget-token` (ENABLE_DEMO, same-origin callers only, seeded Nova customers only), and `/api/admin/widget`. Dev-server checks: 403 for a bad company or origin (frame and config), 401 without a token or with a bad one, 403 for a cross-origin demo-token call, 401 for admin settings without a session.
 - 2026-10-10: M5c.1 done. `lib/widget.ts`: `siteOrigin` (HTTPS, no path or credentials, HTTP only for localhost), `validateWidgetConfig`, `getWidgetConfig` (a missing or invalid stored config means disabled), `allowedWidget` (one 403 for unknown company, disabled widget or unlisted origin), and widget tokens (`issueWidgetToken`, `verifyWidgetToken`, `requireWidget`, which re-checks the origin and customer on every request). Tokens have their own issuer/audience and no `role`, so they can't stand in for session cookies and vice versa. `widget.test.ts`: 23 tests, including a session token, a wrong audience, a wrong secret, a removed origin, and no fallback secret.
