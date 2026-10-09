@@ -26,6 +26,7 @@ _Items built and unit-tested but not yet run against real Firebase/OpenAI/SMTP._
 
 ## Log
 
+- 2026-10-10: M1.3 done. `proxy.ts` (Next 16 deprecates `middleware.ts`) redirects `/admin` and `/admin/*` except `/admin/login` when there's no valid admin JWT. Checked in dev with a throwaway shell `JWT_SECRET`: no cookie, a garbage cookie and a customer session → 307 to `/admin/login`; an admin token → 200; `/admin/login` → 200.
 - 2026-10-10: M1.2 done. `lib/auth.ts` per MODULES.md, plus `signSession`/`verifySession` (shared by `getSession`) and `hashPassword` (bcrypt cost 10, used by the seed). `requireApiKey` accepts any bearer token shape and validates only by sha256 lookup + `isActive`, because the docs don't fix the format of `NOVA_DEMO_API_KEY` (D15). `auth.test.ts` covers the required cases, plus role checks, a missing `JWT_SECRET` and API-key lookup with a mocked db.
 - 2026-10-10: M1.1 done. `lib/rate-limit.ts` (in-memory sliding window, prunes stale keys past 10k entries) and `lib/validation.ts` (`parseChatInput`), with `validation.test.ts`. `env`/`http`/`db` were already written in M0.3.
 - 2026-10-10: M0.4 done; **M0 exit passed.** `GET /api/health` → `{ ok: true }`. `npm run check` passes (0 lint errors, 11 pre-existing warnings in copied UI). Under `npm run dev`, `/`, `/architecture`, `/security`, `/pricing`, `/docs`, `/login`, `/walkwave`, `/nova`, `/admin/login` and `/admin/dashboard` all return 200.
