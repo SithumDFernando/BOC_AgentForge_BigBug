@@ -96,9 +96,10 @@ export async function embed(texts: string[], task?: 'document' | 'query'): Promi
 ## `lib/tools.ts`
 ```ts
 export const TOOL_SPECS: ToolSpec[]
-export type ToolContext = { tenantId: string; userId?: string; requestId: string; originalMessage: string; companyName: string; state: ToolState }
+export type ToolContext = { tenantId: string; userId?: string; requestId: string; originalMessage: string; scrubbedMessage: string; amount: number | null; companyName: string; state: ToolState }
+// amount = the largest parseAmounts(message), computed by lib/chat.ts (this avoids a chat ↔ tools import cycle)
 export type ToolState = { orders?: Order[]; sources: string[]; escalationId?: string; email?: string; calls: number }
-export async function runTool(call: ToolCall, ctx: ToolContext): Promise<{ ok: boolean; result: unknown }>
+export async function runTool(call: ToolCall, ctx: ToolContext): Promise<{ ok: boolean; status: 'ok' | 'rejected' | 'error'; result: unknown; action?: string }>
 export function validateArgs(name: string, args: unknown): { ok: true; value: Record<string, unknown> } | { ok: false; error: string }
 ```
 The four tools (D22). **No tool takes `tenantId`, `customerId`, `userId` or an email address**; those come from `ctx`.
@@ -107,8 +108,8 @@ The four tools (D22). **No tool takes `tenantId`, `customerId`, `userId` or an e
 |---|---|---|---|
 | `searchPolicies` | `{ query: string 1–300 }` | `searchKnowledge(ctx.tenantId, query)` → `{ found, text, sources }`. Adds sources to `state.sources` | — |
 | `getMyOrders` | `{ orderId?: string matching (WW or NV)-dddd }` | No `userId` → `{ error: 'not_signed_in' }`. Else `getCustomerOrders(tenantId, userId, orderId)` → `state.orders`; returns each order's fields plus its `describeOrder` line | `queryDatabase` |
-| `sendEmailUpdate` | `{ orderId?: same pattern }` | No `userId` → `not_signed_in`. Orders = `state.orders` or a fresh `getCustomerOrders`. None → `{ error: 'no_orders' }`. Recipient = `resolveRecipient(user, extractEmail(ctx.originalMessage))`. Body = the `describeOrder` lines, never model text. `sendEmail` → `state.email` | `sendEmail` |
-| `requestManagerReview` | `{ reason: string 1–500 }` | No `userId` → `not_signed_in`. `createEscalation` with the model's `reason` (shown to the admin as written by the assistant), `userMessage` = the scrubbed message, `reviewRule: 'The assistant requested a manager review.'` and `amount` = the largest `parseAmounts(originalMessage)` or `null` → `state.escalationId` | `escalateToHuman` |
+| `sendEmailUpdate` | `{ orderId?: same pattern }` | No `userId` or not an active user of the tenant → `not_signed_in`. One email per message (`already_requested`). Orders = `state.orders` or a fresh `getCustomerOrders`. None → `{ error: 'no_orders' }`. Recipient = `resolveRecipient(user, extractEmail(ctx.originalMessage))`. Body = the `describeOrder` lines, never model text. `sendEmail` → `state.email` | `sendEmail` |
+| `requestManagerReview` | `{ reason: string 1–500 }` | No `userId` → `not_signed_in`. `createEscalation` (once per message) with the model's `reason` (shown to the admin as written by the assistant), `userMessage` = the scrubbed message, `reviewRule: 'The assistant requested a manager review.'` and `amount` = `ctx.amount` → `state.escalationId` | `escalateToHuman` |
 
 - `validateArgs`: args must be a plain object with **only** the listed keys and the right types. Anything else → `{ ok: false, error: 'invalid_arguments' }`, and the tool doesn't run. An unknown tool name → `unknown_tool`.
 - `runTool` increments `state.calls`. Each call is recorded with `recordAction` (type `tool`, status `ok` / `rejected` / `error`, details `{ tool, orderId? }`) and in the chat `trace`.
