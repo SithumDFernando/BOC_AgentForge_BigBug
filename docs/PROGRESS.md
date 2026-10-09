@@ -20,7 +20,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 
 ## Blockers
 
-_None yet._
+- **No live environment yet.** A git-ignored `.env` exists (Next.js and `npm run seed` both load it, like `.env.local`), but by length `FIREBASE_PRIVATE_KEY` (61 chars) and `OPENAI_API_KEY` (6 chars) are still placeholders, it predates the Vertex AI variables (`LLM_PROVIDER`, `GOOGLE_CLOUD_PROJECT`, `VERTEX_*`), and this machine has no `gcloud` or Application Default Credentials. Values were checked by length only and never printed. Fix: follow THIRD_PARTY_SETUP §2–3 and copy the new names from `.env.example`.
 
 ## Needs live verification
 
@@ -31,6 +31,7 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M2.3 done. `/api/admin/documents` GET/POST/DELETE (admin only, tenant from the session, 4 MB request guard, title ≤ 200 characters defaulting to the filename, `maxDuration` 60). Checked on the dev server: 401 without a session; with an admin token, `.png` → 400 "Please upload a PDF or TXT file.", an empty file → 400, a bad id → 400; `Walkwave_Policies.pdf` parsed and then failed at Firestore with a generic 500 (no credentials, see Blockers).
 - 2026-10-10: M2.2 done. `lib/knowledge.ts`: lazy PDF parsing (unreadable PDF → 400), chunking, `indexDocument` (embed first so a failure writes nothing; replaces old chunks of a fixed id; refuses another tenant's id; rolls back chunks if the document write fails), `listDocuments`, `deleteDocument` (document first, then chunks), `searchKnowledge` with a tenant-filtered cosine `findNearest` (distance ≤ 0.8, indexed docs only; logs a hint if the vector index is missing). `knowledge.test.ts`: 12 tests on an in-memory Firestore fake. A real `findNearest` needs the vector index (THIRD_PARTY_SETUP §2.7).
 - 2026-10-10: M2.1 done. `lib/log.ts` (structured JSON logs, `recordAction`) and `lib/llm.ts`: Vertex AI via `@google/genai` 2.28 (new dependency, D21) and OpenAI, tool calls in both provider formats, Gemini's raw content replayed for thought signatures, 1 retry on 429/5xx/network, OpenAI fallback for `generate` only, 768-dim embeddings with batching and a length check. Output cap 1024 tokens (D29). `lib/env.ts` gained the Vertex names. `llm.test.ts`: 10 tests with mocked SDKs. Not yet run against real Vertex AI (needs a project).
 - 2026-10-10: **Plan changes approved by the team and applied to the docs.** Cloud Run becomes P0 as M5b (D20, reverses D12; GCP over the AWS credits). Vertex AI Gemini is the model, with OpenAI as an optional fallback (D21). The model gets four scoped tools, with the deterministic rules kept as degraded mode (D22, reverses D5). Firestore vector search (D23), structured logs (D24), PITR and daily backups on (D25), PDPA as a mapped target (D26), the embeddable widget as F12/M5c (D27), and the Round 1 divergences explained in the new `docs/PITCH.md` (D28). SPEC F1, F3–F5, F7 and F10–F12, SECURITY rules 1, 2, 5, 7 and 10–12 and the PDPA mapping, ARCHITECTURE, MODULES, API, TASKS, TESTING, THIRD_PARTY_SETUP, DEMO_RUNBOOK, CLAUDE.md, README and `.env.example` were updated. Committed `.gitignore` (`*_private.md`).
