@@ -16,7 +16,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M5c Website widget (P1) | done (offline) | **no** |
 | M6 UI edits | done | n/a |
 | M7 Public pages truth pass | done | n/a |
-| M8 Verification | not started | — |
+| M8 Verification | in progress | — |
 
 ## Blockers
 
@@ -45,6 +45,7 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M8.1 done. `scripts/verify.ts` implements TESTING.md cases 1–28: a cookie jar per actor, SSE parsing, PASS/FAIL/SKIP, and exit 1 on any failure. Case 24 runs only with `--send-email`; widget cases 25–28 SKIP if `/api/widget/config` returns 404. They use `BASE_URL`'s origin, which the seed allows for `tnt_nova` when `APP_BASE_URL` matches. Against the dev server without Firestore, cases 1–4 pass and the run stops at sign-in with a clear message. The full run needs a seeded database.
 - 2026-10-10: M7.2 done; **M7 exit passed.** The forbidden-claims grep prints nothing; no page names Vertex AI, Cloud Run or any other target service, PDPA, or "compliant", so there's nothing to Target-label. The "Where it runs" list on `/architecture` waits until Cloud Run is live. `/`, `/security`, `/docs`, `/architecture`, `/login`, `/pricing` all render 200.
 - 2026-10-10: M7.1 done. Home: the email feature text (verified or approved address), step 02 "Connect your website", step 03 without agent activity. Security: an honest email rule, a new "Assistant actions" item, demo accounts as a shortcut, a "Known limitations" section. Docs: the cut-page bullets removed, error codes added, a new `#widget` install section. Architecture: step 3 names the four server-checked tools. Login: the dead `/ops/login` card replaced by "Try the demo stores".
 - 2026-10-10: M6.2 done; **M6 exit passed** (one dead link left for M7.1). The dashboard now has loading and error states and no longer shows placeholder zeros when stats fail (rule 8). The documents and API-keys pages show a failed list load instead of an empty table, and API-keys shows page-level errors outside its modal. Link crawl with an admin session: every internal `href` and nav target returns 200, except `/ops/login` on the public login page, which is a UI.md public-page edit fixed in M7.1.
