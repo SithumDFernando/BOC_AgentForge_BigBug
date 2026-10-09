@@ -24,7 +24,7 @@ The re-sync brought in the old repo's own truth pass: the public pages are now s
 | `app/(public)/architecture/page.tsx` ("How support works") | Edit | Step 3 says "Policy questions use indexed company documents"; add that the assistant chooses from four server-checked tools. Once PROGRESS.md records Cloud Run as live (M5b), add a short "Where it runs" list: Cloud Run (asia-south1), Firestore with vector search, Vertex AI, Secret Manager, Cloud Logging and Monitoring. Until then name no cloud service |
 | `app/(public)/security/page.tsx` ("Data & privacy") | Edit | "Email updates": an address typed in the message is used only when it's on the approved list; otherwise the verified or demo address is used. "Demo accounts": "Walkwave signs in a prepared fictional customer automatically; Nova offers a picker. This is a demo shortcut, not real customer authentication." Add a short "Known limitations" section taken from [SECURITY.md](SECURITY.md) (demo identity, pattern-based injection check, in-memory rate limit, logical tenant isolation) |
 | `app/(public)/pricing/page.tsx` ("Plans") | Keep | Says pricing isn't part of the prototype. No figures |
-| `app/(public)/docs/page.tsx` ("Integration guide") | Edit | Remove the bullets "Manage the prepared customer accounts in Users & Access" and "Check actual database and email actions in Website Agent" (both pages were cut, D11). Under the Enterprise API example, add one line with the error codes from [API.md](API.md#post-apiv1chat-api-key): `400` invalid input, `401` bad or inactive key, `403` customer not in this company, `429` rate limited |
+| `app/(public)/docs/page.tsx` ("Integration guide") | Edit | Add a short "Install the website widget" section with `id="widget"` (the admin widget page links to `/docs#widget`): enable it in Website widget, list the origins, paste the snippet, and for personal orders, build a server endpoint that calls `POST /api/widget/session` with the API key. Remove the bullets "Manage the prepared customer accounts in Users & Access" and "Check actual database and email actions in Website Agent" (both pages were cut, D11). Under the Enterprise API example, add one line with the error codes from [API.md](API.md#post-apiv1chat-api-key): `400` invalid input, `401` bad or inactive key, `403` customer not in this company, `429` rate limited |
 | `app/(public)/login/page.tsx` ("Team access") | Edit | Replace the "Platform operations" card (links to `/ops/login`, which doesn't exist) with a "Try the demo stores" card linking to `/walkwave` and `/nova`. In the Company admin card, "customer access" → "API keys" |
 
 ### Forbidden-claims checklist (must pass before M7 is done)
@@ -60,7 +60,16 @@ grep -rniE "SOC ?2|HIPAA|ISO ?27001|GDPR|[0-9]{2}\.[0-9]+ ?%|\bSLA\b|\bSLO\b|pro
 | `app/admin/dashboard/page.tsx` | Keep | `/api/admin/stats` makes `tokenUsage` real (the sum of model tokens). Not re-synced: the old repo relabeled this tile "Recorded Chats" because its `tokenUsage` became a chat count. Ours stays "Token Usage" |
 | `app/admin/documents/page.tsx` | Keep | Verify that upload shows the `400` error text from the API |
 | `app/admin/api-keys/page.tsx` | Keep | The list shows the `key` prefix. On create it shows the full key once (API contract already matches) |
+| `app/admin/widget/page.tsx` | Keep (new, F12) | Widget settings and the copyable snippet, adapted from the old repo's `WidgetSettings.tsx` (`122bfa4`). Reads and saves `/api/admin/widget` |
 | `app/admin/escalations/page.tsx` | Edit | Re-synced: it now filters by `status` (pending / approved / rejected), sends no `tenantId` or `adminId`, takes an optional decision note, shows the customer's name, email, request and review rule, and has loading, empty and error states. Remaining edits: 1. The "How manager review works" text lists "a foreign-currency refund request", which isn't one of our rules (D8). Use "A refund request above LKR 50,000, or a refund request that asks for a manager, creates a pending ticket." 2. Show `amount` when it's present, formatted `LKR 75,000` (add `amount?: number \| null` to `Ticket`) |
+
+## Embeddable widget files (F12)
+
+| File | Status | Notes |
+|---|---|---|
+| `public/widget.js` | Keep | The old repo's loader, unchanged: it derives the AgentForge host from its own `src`, so nothing is hard-coded |
+| `public/widget/frame.js` | Keep | The old repo's frame script, with `adminNote` (our field) instead of `decisionNote`, and the `guardrailBlocked` label |
+| `public/widget/frame.css` | Keep | Unchanged |
 
 ## UI states every interactive screen must have
 

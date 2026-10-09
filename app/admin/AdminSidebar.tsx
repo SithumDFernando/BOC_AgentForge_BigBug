@@ -14,6 +14,7 @@ const ADMIN_NAV = [
       { label: 'Knowledge Base',  href: '/admin/documents',   icon: 'library_books',      desc: 'PDF policies & RAG' },
       { label: 'Agent Settings',  href: '/admin/settings',    icon: 'settings',           desc: 'Configure Database Agent' },
       { label: 'API Keys',        href: '/admin/api-keys',    icon: 'key',                desc: 'System integrations' },
+      { label: 'Website widget',  href: '/admin/widget',      icon: 'chat_bubble',        desc: 'Install on your site' },
     ],
   },
   {
