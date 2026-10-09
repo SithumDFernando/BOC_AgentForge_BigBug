@@ -131,7 +131,7 @@ export async function searchKnowledge(tenantId: string, question: string): Promi
 
 ## `lib/orders.ts`
 ```ts
-export async function getCustomerOrders(tenantId: string, customerId: string, orderId?: string): Promise<Order[]>
+export async function getCustomerOrders(tenantId: string, customerId: string, orderId?: string, requestId?: string): Promise<Order[]>
 export function describeOrder(o: Order): string
 ```
 - Query `demo_orders` where `tenantId ==` and `customerId ==` (and `orderId ==` if given), limit 10. Log an `agent_actions` record of `type: 'database'`.
