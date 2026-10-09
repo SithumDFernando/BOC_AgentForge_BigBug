@@ -25,12 +25,11 @@ export default function AdminDocuments() {
   async function fetchDocuments() {
     try {
       const res = await fetch('/api/admin/documents');
-      if (res.ok) {
-        const data = await res.json();
-        setDocuments(data.documents);
-      }
-    } catch (e) {
-      console.error(e);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) setDocuments(data.documents);
+      else setError(data.error || 'Unable to load documents.');
+    } catch {
+      setError('Unable to load documents.');
     } finally {
       setLoading(false);
     }

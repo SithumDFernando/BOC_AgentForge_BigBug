@@ -26,12 +26,11 @@ export default function AdminApiKeys() {
   async function fetchKeys() {
     try {
       const res = await fetch('/api/admin/api-keys');
-      if (res.ok) {
-        const data = await res.json();
-        setKeys(data.keys);
-      }
-    } catch (e) {
-      console.error(e);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) setKeys(data.keys);
+      else setError(data.error || 'Unable to load API keys.');
+    } catch {
+      setError('Unable to load API keys.');
     } finally {
       setLoading(false);
     }
@@ -111,6 +110,8 @@ export default function AdminApiKeys() {
           Generate New Key
         </button>
       </div>
+
+      {error && !showModal && <div role="alert" className="mb-6 p-4 bg-error-container text-error rounded-xl font-medium">{error}</div>}
 
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/20 overflow-hidden shadow-sm">
         <table className="w-full text-left">

@@ -14,7 +14,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M5 Admin features | done (offline) | **no** |
 | M5b Cloud Run, monitoring, recovery | files ready; **waiting on a human** | **no** |
 | M5c Website widget (P1) | done (offline) | **no** |
-| M6 UI edits | not started | — |
+| M6 UI edits | done | n/a |
 | M7 Public pages truth pass | not started | — |
 | M8 Verification | not started | — |
 
@@ -45,6 +45,8 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M6.2 done; **M6 exit passed** (one dead link left for M7.1). The dashboard now has loading and error states and no longer shows placeholder zeros when stats fail (rule 8). The documents and API-keys pages show a failed list load instead of an empty table, and API-keys shows page-level errors outside its modal. Link crawl with an admin session: every internal `href` and nav target returns 200, except `/ops/login` on the public login page, which is a UI.md public-page edit fixed in M7.1.
+- 2026-10-10: M6.1 done. `app/layout.tsx` description; the admin sidebar keeps only Dashboard, Knowledge Base, API Keys, Website widget and Escalations; the chat panel shows "Signed in as {name} (demo)" (F2) and labels `guardrailBlocked`; the escalations page explains our actual rule (no "foreign-currency" rule) and shows `amount` as `LKR 75,000`. The storefront needed no edits after the re-sync.
 - 2026-10-10: M5c.4 done; **M5c exit (offline) passed.** The seed writes `tenants/tnt_nova.widget` (enabled, "Nova Assistant", `#3159cc`, origins = the `APP_BASE_URL` origin + `http://localhost:4000`) only when no widget config exists, so admin edits survive re-seeding; `APP_BASE_URL` is now required by the seed. `npm run widget-site` (`scripts/widget-site.ts`) serves a fictional partner page on port 4000 that embeds `widget.js` cross-origin. `/` plays a company backend (its `/api/support/widget-token` calls `POST /api/widget/session` with `NOVA_DEMO_API_KEY` for Alice); `/guest` is anonymous. Checked: both pages serve, the snippet points at `APP_BASE_URL`, and the token endpoint proxies to AgentForge (401 here without a real key).
 - 2026-10-10: M5c.3 done. `public/widget.js` and `public/widget/frame.css` from the old repo (`122bfa4`) unchanged: the loader takes its host from its own `src`, so nothing is hard-coded. `public/widget/frame.js` reads our `adminNote` and labels `guardrailBlocked`. New `app/admin/widget/page.tsx` (adapted from the old `WidgetSettings.tsx`) and a "Website widget" sidebar item. UI.md lists the files and a pending docs-page section (`/docs#widget`). Both static scripts serve 200 on the dev server.
 - 2026-10-10: M5c.2 done. Widget routes: `/widget/frame` (HTML with a CSP whose `frame-ancestors` is the allowed origins; a refusal is plain text with `frame-ancestors 'none'`), `/api/widget/config` (CORS for the allowed origin only), `/api/widget/bootstrap` (anonymous token, 20/min per IP), `/api/widget/session` POST (API key → customer token) and GET (the frame checks a token; added to API.md), `/api/widget/chat`, `/api/widget/escalation`, `/api/demo/widget-token` (ENABLE_DEMO, same-origin callers only, seeded Nova customers only), and `/api/admin/widget`. Dev-server checks: 403 for a bad company or origin (frame and config), 401 without a token or with a bad one, 403 for a cross-origin demo-token call, 401 for admin settings without a session.
