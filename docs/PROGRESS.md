@@ -10,7 +10,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M1 Auth, data, seed | done (offline) | **no**: no `.env.local` yet |
 | M2 Knowledge | done (offline) | **no** |
 | M3 Chat core | done (offline) | **no** |
-| M4 Enterprise API | not started | — |
+| M4 Enterprise API | done (offline) | **no** |
 | M5 Admin features | not started | — |
 | M5b Cloud Run, monitoring, recovery | not started | — |
 | M5c Website widget (P1) | not started | — |
@@ -27,12 +27,15 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 _Items built and unit-tested but not yet run against real Firestore, Vertex AI or SMTP._
 
 - M1.5: `npm run seed` twice against real Firestore (the second run should report only `updated`).
+- M4: the Nova page as Alice shows NV-1001 and the raw JSON panel shows the `trace`; key usage counter increments.
 - M3: the Walkwave bubble answering the policy, order, not-found, injection and refund questions, in agent mode and with `AGENT_TOOLS=off`.
 - M2: `npm run seed` indexing both policies (needs the vector index), and uploading `public/demo/Walkwave_Policies.pdf` in the admin UI → indexed.
 - M1.4: successful admin login, the session route with a real account, and demo login against seeded users (needs Firestore).
 
 ## Log
 
+- 2026-10-10: M4.2 done; **M4 exit (offline) passed.** `POST /api/demo/enterprise-chat`: Nova customers only (401 otherwise), 409 on a stale customer, input validated before forwarding, key from `NOVA_DEMO_API_KEY` only (503 if unset), `APP_BASE_URL` required, 50 s timeout, `cache: 'no-store'`, upstream status and JSON passed through, 502 on a network failure. Checked on the dev server: 401 for a Walkwave session, 409, and 502 with nothing listening at `APP_BASE_URL`.
+- 2026-10-10: M4.1 done. `POST /api/v1/chat`: the key looked up by hash, 30/min per key, `customerId` accepted only as an active user of the key's tenant (403), the same JSON as the SSE `result` (with `trace`, without `tokens`), and `usageCount`/`lastUsed` updated best effort. Checked: 401 without a key and with an unknown key.
 - 2026-10-10: M3.5 done; **M3 exit (offline) passed.** `POST /api/chat`: one-shot SSE (`agent` events as actions happen, then `text`, then `result` with `trace`; `error` on failure; `tokens` not exposed), a 409 on a stale `expectedCustomerId`, a 30/min limit per customer, and a new `assertActiveCustomer` check (403 for a disabled customer; added to `lib/auth.ts`, API.md and MODULES.md). `GET /api/escalation/[id]`: the owner or an admin of the same tenant, otherwise 404. Dev-server checks: 401 anonymous, 409 on a stale customer, 400 for an empty message or bad JSON, a generic 500 when Firestore is unreachable. `npm run check` passes (92 tests).
 - 2026-10-10: M3.4 done. `lib/chat.ts`: guardrail → refund rule (before any model) → agent loop (≤ 3 tool calls, ≤ 4 model calls, the last one without tools, Gemini raw content replayed) → output checks → `chat_history`. Rules as degraded mode on `LlmUnavailableError` or with `AGENT_TOOLS=off`; in rules mode the email reuses `runTool('sendEmailUpdate')`. Beyond MODULES.md, two more deterministic checks were added and documented: an order question refused for sign-in gets the fixed sign-in reply, and a policy search that found nothing gets the fixed no-information reply. `checkOrderFacts` also checks the status word and that no other ISO date appears. `chat.test.ts`: 19 tests.
 - 2026-10-10: M3.3 done. `lib/tools.ts`: four tool specs (JSON Schema with `additionalProperties: false`), a strict `validateArgs`, and `runTool`. Identity comes only from the context, the email body is built from the order records, one email and one ticket per message, and a thrown error becomes `tool_failed`. Each call is recorded. The refund amount comes in through `ToolContext.amount`, set by the chat router, to avoid a chat ↔ tools import cycle (MODULES.md updated). `tools.test.ts`: 18 tests.
