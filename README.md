@@ -8,6 +8,7 @@ Built for the **Beauty of Cloud 2.0** final. It is a working prototype with fict
 
 ```bash
 cp .env.example .env.local   # fill in values, see docs/THIRD_PARTY_SETUP.md
+gcloud auth application-default login   # Firestore and Vertex AI credentials
 npm install
 npm run seed
 npm run dev                  # http://localhost:3000
@@ -32,6 +33,7 @@ npm run dev                  # http://localhost:3000
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Settled design decisions |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | What runs today vs. the target Google Cloud design |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security rules, threat model, known limitations, forbidden claims |
-| [docs/THIRD_PARTY_SETUP.md](docs/THIRD_PARTY_SETUP.md) | Firebase, OpenAI, Gmail, optional Cloud Run setup |
+| [docs/THIRD_PARTY_SETUP.md](docs/THIRD_PARTY_SETUP.md) | Google Cloud, Vertex AI, Gmail, Cloud Run setup |
+| [docs/PITCH.md](docs/PITCH.md) | Slide plan, Round 1 changes, cost and scope |
 | [docs/DEMO_RUNBOOK.md](docs/DEMO_RUNBOOK.md) | Stage checklist and backup plan |
 | [docs/MIGRATION.md](docs/MIGRATION.md) | What came from the previous repo |

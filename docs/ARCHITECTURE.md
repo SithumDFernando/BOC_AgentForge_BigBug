@@ -2,73 +2,96 @@
 
 This document has two parts that must never be mixed up. Slides and pitch answers must say which one they are describing.
 
-- **Part A: Prototype.** What actually runs in this repo today.
+- **Part A: Prototype.** What this repo builds and runs. Each cloud piece is marked with its status; only say it "runs" once [PROGRESS.md](PROGRESS.md) records it as live.
 - **Part B: Target.** How we would run it in production on Google Cloud. Not built.
 
 ---
 
-## Part A: Prototype (what runs today)
+## Part A: Prototype
 
 ```
-Browser (Walkwave widget / Nova custom UI / Admin portal)
-        │  HTTPS, HTTP-only session cookie
+Browser (Walkwave widget / Nova custom UI / any site with widget.js (F12) / Admin portal)
+        │  HTTPS, HTTP-only session cookie or widget token
         ▼
-Next.js 16 app (App Router, Node runtime): local, or Cloud Run if F10 is done
-  ├─ Route handlers (/api/**)   auth → validate → service → JSON
+Cloud Run service "agentforge" (asia-south1, max 2 instances)     ← local `npm start` as fallback
+  Next.js 16 app (App Router, Node runtime), one container
+  ├─ Route handlers (/api/**)   auth → validate → lib → JSON
   ├─ lib/auth        JWT session (jose), bcrypt passwords, API-key hashing
   ├─ lib/guardrails  injection block, PII scrub (before every model call)
-  ├─ lib/chat        deterministic router: order? email? refund? else → policy Q&A
-  ├─ lib/knowledge   PDF/TXT extract → chunk → embed → Firestore; cosine search
-  ├─ lib/llm         provider interface: generate(), embed()  (OpenAI implementation)
+  ├─ lib/chat        refund rule → agent loop (≤ 3 tool calls) → output checks; rules as degraded mode
+  ├─ lib/tools       searchPolicies · getMyOrders · sendEmailUpdate · requestManagerReview
+  ├─ lib/knowledge   PDF/TXT extract → chunk → embed → Firestore vectors; findNearest search
+  ├─ lib/llm         provider interface: generate() with tools, embed()  (Vertex AI; OpenAI fallback)
   ├─ lib/email       nodemailer → Gmail SMTP
+  ├─ lib/log         structured JSON logs → Cloud Logging
   └─ lib/db          firebase-admin Firestore (server only)
         │
-        ├──► Firestore (Firebase project, Native mode). Client access denied by rules
-        ├──► OpenAI API (chat model + text-embedding-3-small)
-        └──► Gmail SMTP (app password)
+        ├──► Firestore (Native, asia-south1): data + vector index. Client access denied by rules. PITR + daily backups
+        ├──► Vertex AI: Gemini chat model + text embeddings (service-account auth)
+        ├──► OpenAI API (optional fallback for generate only)
+        ├──► Gmail SMTP (app password from Secret Manager)
+        ├──► Secret Manager: JWT_SECRET, SMTP_PASS, NOVA_DEMO_API_KEY, admin passwords, OPENAI_API_KEY
+        └──► Cloud Logging / Monitoring: logs, uptime check on /api/health, alerts, dashboard
 ```
 
-### Where it runs
+| Piece | Status |
+|---|---|
+| Next.js app, Firestore, Gmail SMTP | Built in M0–M5 |
+| Vertex AI, Firestore vector search, tools | Built in M2–M3 |
+| Cloud Run, Secret Manager, Cloud Logging, uptime check, PITR, backups | M5b (F10, F11); needs a human with `gcloud` |
+| Widget (F12) | M5c (P1) |
 
-Today this repo runs only on a laptop (`npm run build && npm start`). Nothing from it is hosted yet. Cloud Run is F10 (D12). The old repo's demo ran on **Vercel**; this repo doesn't use Vercel, because it isn't one of the platforms the competition permits (AWS, GCP, Azure) and nothing here was deployed there (D17). Don't describe Vercel or Cloud Run as running unless it's true at the time.
+The old repo's demo ran on Vercel. This repo doesn't use Vercel: it isn't one of the platforms the competition permits (D17).
 
 ### Request flow: customer chat message
 
-1. The route handler reads the session. Missing session or wrong role → 401. `tenantId` and `userId` come from the session only.
+1. The route handler reads the session (or widget token, or API key). Missing or wrong role → 401. `tenantId` and `userId` come from there only.
 2. Input validation: message 1–4000 chars, history at most 8 turns, `requestId` format.
 3. Guardrails: injection check (block + log) → pull out any explicit email address → scrub personal data.
-4. Deterministic intent routing in server code, in this order:
-   1. **Refund over the limit, or the customer asks for a human** → create an escalation ticket (idempotent per `requestId`) → fixed reply.
-   2. **Order intent** → Firestore query on `tenantId` + `customerId` (+ `orderId` if given) → reply built from a template.
-   3. **Policy question** → embed the question → load the tenant's chunks → cosine top-5 → model answers **only** from those chunks → reply + sources.
-   4. If **email intent** is present, the content from step 2 or 3 is emailed (idempotent per `requestId`, recipient checked).
-5. Append to `chat_history`. Record each action in `agent_actions`.
+4. **Refund rule** in server code: a refund over the limit, or a refund request that asks for a human → escalation ticket (idempotent per `requestId`) → fixed reply. The model isn't called.
+5. **Agent loop**: the model gets the scrubbed conversation and four tool definitions. Each tool call is validated, run by the server with the session's identity, recorded, and returned as data. At most 3 tool calls, at most 4 model calls.
+6. **Output checks**: order facts must match the tool result (otherwise the database text replaces the reply); no orders → the fixed not-found reply; a reply that used no tool → a fixed help reply; the email outcome is appended by the server.
+7. If the model provider fails → **degraded mode**: the deterministic rules from before D22 answer (order template, policy answer, email).
+8. Append to `chat_history`. Every step goes to `agent_actions` and a structured log line with the `requestId`. Together they're the decision trace, also returned as `trace`.
 
-The model is never given tools and never decides to take an action. It only writes text from the context it is given.
+The model never sees another customer's data and can't move money or decide a ticket: no tool does that.
 
-### Vector search without a vector database
+### Vector search
 
-A tenant has fewer than about 200 chunks. Each query loads that tenant's chunks (`where tenantId ==`) and ranks them by cosine similarity in memory. This removes a third-party dependency and keeps tenant filtering in the same query as the data. At larger scale, swap in Firestore vector search (`findNearest`) or Vertex AI Vector Search. See Part B.
+Each chunk's embedding (768 dimensions) is stored as a Firestore vector. A query filters `tenantId ==` and runs `findNearest` (cosine, top 5) in the same request, using one composite vector index. This keeps tenant filtering inside the database query, with no extra vendor. At large scale: Vertex AI Vector Search (Part B).
 
 ### Firestore data model
 
 | Collection | Key fields | Written by |
 |---|---|---|
-| `tenants/{tenantId}` | name, refundLimit, currency | seed |
+| `tenants/{tenantId}` | name, refundLimit, currency, widget `{ enabled, name, color, allowedOrigins }` | seed / admin |
 | `business_admins/{id}` | tenantId, email, name, passwordHash, isActive | seed |
 | `users/{customerId}` | tenantId, name, email, isActive, isDemo | seed |
 | `demo_orders/{orderId}` | tenantId, customerId, productName, shippingStatus, trackingNumber, estimatedDelivery, totalAmount, currency | seed |
 | `documents/{docId}` | tenantId, title, filename, status, chunkCount, createdAt | upload |
-| `knowledge_chunks/{docId_i}` | tenantId, docId, title, content, embedding (number[]) | upload |
+| `knowledge_chunks/{docId_i}` | tenantId, docId, title, content, embedding (vector, 768) | upload |
 | `escalations/{tenant_user_requestId}` | tenantId, userId, reason, userMessage, reviewRule, amount, urgency, status, adminId, adminNote, decidedAt, createdAt | chat / admin |
 | `api_keys/{id}` | tenantId, name, keyHash, prefix, isActive, usageCount, lastUsed | admin / seed |
 | `email_requests/{tenant_user_requestId}` | status | chat |
 | `chat_history/{auto}` | tenantId, userId, message (PII-scrubbed), reply, actions, tokens, createdAt | chat |
-| `agent_actions/{auto}` | tenantId, userId, type, status, details, createdAt | all actions |
+| `agent_actions/{auto}` | tenantId, userId, requestId, type, status, details, createdAt | all actions |
 
-No composite indexes are needed: every query uses equality filters only, and sorting happens in memory.
+Indexes: one composite vector index on `knowledge_chunks` (`tenantId` ascending + `embedding` vector, 768, flat). Every other query uses equality filters only, and sorting happens in memory.
 
 Firestore rules: `allow read, write: if false;` on everything. Only the server, using the Admin SDK, can read or write.
+
+### Operations (F10, F11)
+
+| Concern | What we run |
+|---|---|
+| Deploy | `gcloud run deploy --source .` from the repo's Dockerfile (standalone Next.js build) |
+| Scaling and cost | min instances 0 (1 on demo day), max 2, scale to zero otherwise |
+| Secrets | Secret Manager, mounted as env vars; Firestore and Vertex AI via the service account |
+| Logs | Structured JSON on stdout → Cloud Logging; filter by `jsonPayload.requestId` / `tenantId` / `action` |
+| Monitoring | Uptime check on `/api/health` with an email alert; (P1) log-based metrics for guardrail blocks, escalations, tool errors and 5xx, on one dashboard |
+| Recovery | Firestore point-in-time recovery (7-day window) and a daily backup schedule (7-day retention) |
+| Spend | Billing budget alert; OpenAI spend cap if the fallback is configured |
+| Fallback | Local `npm run build && npm start` against the same Firestore, then the recorded demo |
 
 ---
 
@@ -76,14 +99,17 @@ Firestore rules: `allow read, write: if false;` on everything. Only the server, 
 
 | Concern | Target service | Why |
 |---|---|---|
-| Compute | Cloud Run (min instances 1, autoscaling) | Stateless container, scales to zero for small tenants |
-| Edge | Cloud Load Balancing + Cloud Armor | WAF, rate limiting, DDoS protection |
-| Data | Firestore (Native) with per-tenant composite indexes | Serverless, multi-region option |
-| Vectors | Firestore vector search, or Vertex AI Vector Search | Stays inside GCP, filtered by tenant |
-| Model | Vertex AI (Gemini) behind the same `lib/llm` interface; OpenAI as fallback | Data residency, enterprise terms |
-| Secrets | Secret Manager | No keys in env files or images |
-| Async work | Pub/Sub → Cloud Run jobs (email, notifications) | Retries without blocking chat |
-| Audit | Cloud Logging → BigQuery sink | Queryable decision audit |
-| Identity | Identity Platform for customers and admins | Replaces the demo customer sessions (Walkwave's automatic sign-in, Nova's picker) |
+| Edge | Global external load balancer + Cloud Armor | WAF, per-tenant rate limits, DDoS protection. Replaces Round 1's Apigee at a fraction of the cost |
+| Compute | Cloud Run in two regions (`asia-south1` + `asia-south2`) behind the load balancer; the orchestration, tools and ingestion split into separate services when load differs | Regional failover; independent scaling, as Round 1 proposed |
+| Data | Firestore with PITR, daily backups, and scheduled exports to Cloud Storage in a second region | Restore after a regional loss. Firestore has no Asia multi-region location, so a multi-region database means US/EU residency: a trade-off to decide per customer |
+| Vectors | Vertex AI Vector Search for large tenants | Scale past Firestore vector search |
+| Model | Vertex AI (Gemini) with routing between a fast and a stronger model; OpenAI or Anthropic as fallback | Cost control and resilience |
+| Cache | Memorystore semantic cache | Fewer model calls for repeated questions |
+| Async work | Pub/Sub → Cloud Run jobs for email and notifications, with retries and a dead-letter topic | Retries without blocking chat |
+| Audit | Cloud Logging → BigQuery sink with a locked dataset; Cloud Trace | Queryable, tamper-evident decision history |
+| Identity | Identity Platform for customers and admins, with MFA for admins | Replaces the demo customer sessions (Walkwave's automatic sign-in, Nova's picker) |
+| Secrets | Secret Manager with per-tenant paths and CMEK | Tenant tool credentials |
 
-Migration path from Part A: change the `lib/llm` implementation; replace the in-memory cosine search with `findNearest`; move email into a Pub/Sub consumer. Route handlers and the data model don't change.
+Target recovery goals (to state as goals, not measured): data loss of at most a few minutes (PITR), and service restored in another region within hours from backups. Multi-region active-active only when a customer needs it.
+
+Migration path from Part A: add the load balancer and the second region; split services along the existing `lib/` boundaries; move email into a Pub/Sub consumer; add the BigQuery sink. Route handlers and the data model don't change.

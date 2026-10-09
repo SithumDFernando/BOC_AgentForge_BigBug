@@ -20,3 +20,6 @@ credentials*
 npm-debug.log*
 .vercel
 coverage/
+
+# private demo notes with credentials
+*_private.md

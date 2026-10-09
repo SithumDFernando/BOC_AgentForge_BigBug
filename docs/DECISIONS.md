@@ -5,22 +5,22 @@ These decisions are settled. Don't reopen them while building. A new decision go
 ### D1. Fresh repo, curated port
 The old repo is public, contains credentials, and has a lot of dead code. We copy only the UI and specs. Every secret is regenerated and the Firebase project is new.
 
-### D2. OpenAI instead of Gemini free tier
+### D2. OpenAI instead of Gemini free tier (superseded by D21)
 The free tier is rate limited and sometimes returns "model overloaded" errors, which is too risky live. A paid OpenAI key ($4 budget, capped at $3) is reliable. All calls go through `lib/llm.ts`, so the target architecture can swap in Vertex AI.
 
-### D3. No vector database; embeddings live in Firestore
+### D3. No vector database; embeddings live in Firestore (revised by D23)
 A tenant has fewer than ~200 chunks, so cosine similarity in memory is instant. This removes Pinecone (one fewer key and failure point) and keeps tenant filtering inside the same query. Target: Firestore `findNearest` or Vertex AI Vector Search.
 
 ### D4. firebase-admin on the server; Firestore rules deny all
 The old app used the browser SDK on the server, which forced the database open to anyone with the public config. With the Admin SDK plus deny-all rules, only our server can access data.
 
-### D5. The model has no tools; server code decides every action
+### D5. The model has no tools; server code decides every action (superseded by D22)
 Order lookups, emails and escalations are triggered by deterministic rules in `lib/chat.ts`. The model only writes policy answers from the provided text. This makes prompt injection low-impact and the demo predictable.
 
 ### D6. Keep the copied UI's API contract
 `ChatPanel` parses Server-Sent Events from `/api/chat`, and Nova calls `/api/demo/enterprise-chat`. We keep both, so the UI files stay unchanged. Streaming is one-shot (actions, then the final text). No token streaming.
 
-### D7. Two fixed demo companies, demo customer picker
+### D7. Two fixed demo companies, demo customer picker (refined by D18)
 Walkwave (widget) and Nova (API). Customers sign in through a picker gated by `ENABLE_DEMO`. Real customer authentication is on the roadmap (Identity Platform).
 
 ### D8. LKR and a 50,000 refund limit
@@ -35,7 +35,7 @@ Keys are high-entropy random values, so an unsalted SHA-256 is enough. The store
 ### D11. Cut scope
 No ops portal, self-registration, user management, analytics charts, reports, PDF generation, OCR, or multi-database connectors. Every cut screen was showing fake data or adding attack surface.
 
-### D12. Cloud Run is a stretch goal (F10)
+### D12. Cloud Run is a stretch goal (F10) (superseded by D20)
 Local `npm start` is the primary demo environment. Cloud Run in the same Firebase/GCP project comes only after all P0 items pass.
 
 ### D13. `@types/node` bumped from ^20 to ^22 (agent decision, M0.1)
@@ -58,3 +58,39 @@ The old repo removed Walkwave's customer picker: opening the assistant signs in 
 
 ### D19. The Nova key stays in the environment, never in Firestore in plain text (re-sync)
 The old repo's `/api/demo/enterprise-chat` fell back to reading a plain-text key from `api_keys/nova_demo_key` when `NOVA_DEMO_API_KEY` was unset. That breaks D10 (only the SHA-256 hash is stored), so it isn't ported. The seed stores only `keyHash` and `prefix`. The route reads the key from `env('NOVA_DEMO_API_KEY')` and calls `APP_BASE_URL` with no platform-specific fallback.
+
+### D20. Cloud Run is P0 (reverses D12; approved by the team 2026-10-10)
+The finalist rules require "a meaningful portion of the cloud architecture" demonstrated live, and Architecture, Reliability and Cost are 50% of the marks. The app runs on Cloud Run in `asia-south1`, in the Firebase project, with Secret Manager and Cloud Logging (F10). It's built in M5b, right after M5, so M6–M8 are verified in the cloud. Local `npm start` is the fallback. GCP over the team's AWS credits: Round 1 was GCP, the data is already in Firestore, and demo-scale usage should fit GCP's free usage allowances.
+
+### D21. Vertex AI Gemini is the model; OpenAI is an optional fallback (revises D2; approved)
+D2's concern was the free Gemini API tier. Paid Vertex AI doesn't share it, matches Round 1, and authenticates with the service identity, so there's no model key. `LLM_PROVIDER=vertex|openai` picks the primary for both `generate` and `embed`. If `LLM_FALLBACK=openai` and `OPENAI_API_KEY` are set, `generate` retries on OpenAI when Vertex fails. Embeddings never fall back: vectors from two models aren't comparable, so they always come from the primary, at 768 dimensions. Switching the primary means re-indexing (`npm run seed` re-indexes the seeded policies).
+
+### D22. The model gets four scoped tools (reverses D5; approved)
+Round 1's first focus was safe tool-calling. The model may call `searchPolicies`, `getMyOrders`, `sendEmailUpdate` and `requestManagerReview` ([MODULES.md](MODULES.md#libtoolsts)). Safety lives in the server, not the prompt:
+- identity is injected, never an argument;
+- arguments are schema-checked;
+- at most 3 calls per message;
+- the refund rule runs before the model and can't be skipped;
+- email recipients and email bodies come from server code;
+- order facts are checked after the model answers;
+- no tool moves money, edits data outside the request, or decides a ticket.
+
+The deterministic router stays as degraded mode, used when the model fails, and as the `AGENT_TOOLS=off` switch for the stage.
+
+### D23. Firestore vector search instead of in-memory cosine (revises D3; approved)
+Chunks store `embedding` as a Firestore vector. Search uses `where('tenantId','==',t).findNearest(...)` (cosine, top 5), which needs one composite vector index ([THIRD_PARTY_SETUP.md](THIRD_PARTY_SETUP.md)). Tenant filtering stays in the same query, and Pinecone stays out. Vertex AI Vector Search remains the Target for large tenants.
+
+### D24. Structured logs to stdout, no logging library
+`lib/log.ts` prints one JSON object per event (`severity`, `message`, `tenantId`, `requestId`, `action`, `status`, `latencyMs`, `tokens`). Cloud Run ships stdout to Cloud Logging, which parses JSON into fields, so log-based metrics and the decision-trace filter need no extra dependency. Logs never contain secrets, raw messages (scrubbed only), or email bodies.
+
+### D25. Point-in-time recovery and daily backups are on for real (approved)
+Both are cheap Firestore features, so they're switched on rather than shown as Target. Multi-region disaster recovery stays Target. Firestore has no Asia multi-region location, so it means choosing between data residency and multi-region ([ARCHITECTURE.md](ARCHITECTURE.md)).
+
+### D26. Sri Lanka's PDPA is a named target, never a claim
+We map our controls to the Personal Data Protection Act, No. 9 of 2022 ([SECURITY.md](SECURITY.md#pdpa-mapping-target-not-a-claim)) and say openly what isn't done, including cross-border processing.
+
+### D27. The embeddable website widget is P1 (F12), rebuilt to our rules (approved)
+Taken from the idea in the old repo's commit `122bfa4`, not its code: that code had a hard-coded fallback signing secret, looked up API keys by plain value, and hard-coded a Vercel origin. It's built in M5c after Cloud Run.
+
+### D28. Round 1 divergences are explained, not rebuilt
+Apigee, Memorystore, Pub/Sub approvals, BigQuery, Cloud Trace, six separate services and per-tenant indexes stay in the Target architecture. [PITCH.md](PITCH.md) has the table of each change and its reason, and the list of Round 1 estimates we corrected.

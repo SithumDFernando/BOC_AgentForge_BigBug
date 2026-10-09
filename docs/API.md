@@ -7,7 +7,7 @@ Conventions:
 - Error shape: `{ "error": "<human-readable, generic message>" }`. Never include stack traces or provider error text.
 - Auth: **customer**, **admin**, **API key**, or **public**, as listed per route. Helpers live in `lib/auth.ts` ([MODULES.md](MODULES.md)).
 - `tenantId` and `userId` always come from the session or API key. Ignore them anywhere in a request, except the one rule on `/api/escalation` GET below.
-- All handlers set `export const runtime = 'nodejs'`. Handlers that call OpenAI also set `export const maxDuration = 60`.
+- All handlers set `export const runtime = 'nodejs'`. Handlers that call the model also set `export const maxDuration = 60`.
 
 ---
 
@@ -51,12 +51,14 @@ Otherwise `200`, `Content-Type: text/event-stream`. Each event is `data: <json>\
 |---|---|---|
 | agent | `{ "type": "agent", "name": "queryDatabase" \| "sendEmail" \| "escalateToHuman" \| "guardrailBlocked" }` | Each action as it happens |
 | text | `{ "type": "text", "content": string }` | Once, with the final reply |
-| result | `{ "type": "result", "reply", "actions": string[], "sources": string[], "escalationId"?: string, "orders"?: Order[], "requestId": string }` | Once, last |
+| result | `{ "type": "result", "reply", "actions": string[], "sources": string[], "escalationId"?: string, "orders"?: Order[], "trace": TraceStep[], "requestId": string }` | Once, last |
 | error | `{ "type": "error", "message": string }` | Instead of text/result on failure (generic message) |
 
 The stream closes after `result` or `error`. The UI in `ChatPanel.tsx` parses exactly this format.
 
 `Order` = `{ orderId, productName, shippingStatus, trackingNumber: string|null, estimatedDelivery: string|null, currency, totalAmount }`.
+
+`TraceStep` = `{ step: 'guardrail'|'rule'|'model'|'tool'|'check', name: string, status: 'ok'|'blocked'|'rejected'|'error'|'replaced', detail?: string }`: the decision trace (F7). It holds tool names, rule names and order IDs only, never message text or personal data. The chat panel ignores it; Nova's "Inspect API response" panel shows it.
 
 ### `GET /api/escalation/[id]`: customer (owner) or admin (same tenant)
 - `200 { "id", "status": "pending"|"approved"|"rejected", "reason", "adminNote" }`.
@@ -72,7 +74,7 @@ Header `Authorization: Bearer af_...`. Body `{ "message", "history"?, "requestId
 - `401 { "error": "Invalid or inactive API key." }` if the key is missing, unknown, or inactive. Look the key up by `sha256(key)`, never by the plain value.
 - `400` validation error. `403 { "error": "Customer is not authorized for this company." }` if `customerId` is not an active user of the key's tenant.
 - `429` rate limited (30/min per key).
-- `200 { "reply", "actions", "sources", "orders"?, "escalationId"?, "requestId" }`, the same fields as the chat `result` event minus `type`.
+- `200 { "reply", "actions", "sources", "orders"?, "escalationId"?, "trace", "requestId" }`, the same fields as the chat `result` event minus `type`.
 - Without `customerId`, only policy questions work. Order, email and refund intents reply "Please sign in…" with no action.
 - On success, increment `usageCount` and set `lastUsed` on the key (failure to do so is logged, not returned).
 
@@ -91,7 +93,7 @@ All admin routes: `401` without an admin session. Every query is scoped to `sess
 
 ### `GET /api/admin/stats`
 `200 { "totalUsers": number, "totalDocs": number, "tokenUsage": number, "totalEscalations": number }`.
-`tokenUsage` = the sum of `tokens` across the tenant's `chat_history` records. It must be real OpenAI usage, not an estimate.
+`tokenUsage` = the sum of `tokens` across the tenant's `chat_history` records. It must be the model provider's real usage, not an estimate.
 
 ### `GET /api/admin/documents`
 `200 { "documents": [{ "id", "title", "filename", "status": "indexed", "chunkCount", "fileSize", "createdAt" }] }`, newest first. Never return the text or the chunks.
@@ -130,10 +132,43 @@ Body `{ "id": string, "decision": "approved"|"rejected", "adminNote"?: string }`
 
 ---
 
+## Website widget (F12, P1)
+
+Origins are compared exactly after normalizing with `siteOrigin` ([MODULES.md](MODULES.md#libwidgetts-f12-p1)). Errors use the usual `{ error }` shape. Every response sets `Cache-Control: no-store`. Rate limits: 20/min per IP for bootstrap and token routes, 30/min per widget session for chat.
+
+### `GET /widget.js`: public (static file)
+The loader. It reads `data-company` and `data-token-url` from its own `<script>` tag and the page's `location.origin`. It adds the launcher button and an iframe pointing to `/widget/frame?company=…&origin=…`. It exposes `window.AgentForgeWidget = { open(), refreshIdentity(), destroy() }`.
+
+### `GET /widget/frame?company=&origin=`: public
+HTML for the chat panel. `403` text if the company or origin isn't allowed. Headers: `Content-Security-Policy` with `frame-ancestors` set to the company's allowed origins and `default-src 'self'`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`.
+
+### `GET /api/widget/config?company=&origin=`: public
+`200 { "company", "name", "color" }`, with `Access-Control-Allow-Origin: <origin>` only when the origin is allowed. Otherwise `403`.
+
+### `POST /api/widget/bootstrap`: public
+Body `{ "company", "origin" }`. `200 { "token", "expiresAt", "customer": null, "name" }`: an anonymous token (policy questions only).
+
+### `POST /api/widget/session`: API key
+The company's **server** calls this after verifying its own signed-in customer. Body `{ "customerId", "origin" }`. `401` bad key, `403` origin not allowed or customer not an active user of the key's tenant. `200 { "token", "expiresAt", "customer": { "id", "name" }, "name" }`.
+
+### `POST /api/demo/widget-token`: public, demo only
+Nova's stand-in for "the company's server". `403` unless `ENABLE_DEMO=true`. Body `{ "company": "tnt_nova", "origin" }`. Uses the current Nova customer session if there is one, otherwise `nova_alice`. Only the seeded `isDemo` Nova customers. Same response as `/api/widget/session`.
+
+### `POST /api/widget/chat`: widget token
+Header `Authorization: Bearer <widget token>`. Body like `/api/chat`. `200` with the same JSON as `/api/v1/chat` (not SSE). Without a customer in the token, order, email and refund intents reply "Please sign in…" with no action.
+
+### `GET /api/widget/escalation?id=`: widget token with a customer
+`200 { "id", "status", "adminNote" }`. `404` unless the ticket belongs to the token's tenant and customer.
+
+### `GET`/`POST /api/admin/widget`: admin
+`GET` → `200 { "companyId": tenantId, "widget": WidgetConfig, "snippet": string }`. `POST` body `{ "widget": WidgetConfig }` → validated with `validateWidgetConfig` (`400` with a readable message) → saved to `tenants/{tenantId}.widget` → `200 { "success": true, "widget" }`. The snippet uses `APP_BASE_URL`.
+
+---
+
 ## Public
 
 ### `GET /api/health`
-`200 { "ok": true }`. Does not touch Firestore or OpenAI.
+`200 { "ok": true }`. Does not touch Firestore or the model.
 
 ---
 
