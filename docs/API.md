@@ -151,6 +151,9 @@ Body `{ "company", "origin" }`. `200 { "token", "expiresAt", "customer": null, "
 ### `POST /api/widget/session`: API key
 The company's **server** calls this after verifying its own signed-in customer. Body `{ "customerId", "origin" }`. `401` bad key, `403` origin not allowed or customer not an active user of the key's tenant. `200 { "token", "expiresAt", "customer": { "id", "name" }, "name" }`.
 
+### `GET /api/widget/session`: widget token
+The frame checks a token it was handed (from the company's token endpoint) before using it. `200 { "company", "origin", "customer": { "id", "name" } | null }`. `401` for an invalid or expired token, `403` if the origin is no longer allowed or the customer is inactive.
+
 ### `POST /api/demo/widget-token`: public, demo only
 Nova's stand-in for "the company's server". `403` unless `ENABLE_DEMO=true`. Body `{ "company": "tnt_nova", "origin" }`. Uses the current Nova customer session if there is one, otherwise `nova_alice`. Only the seeded `isDemo` Nova customers. Same response as `/api/widget/session`.
 
