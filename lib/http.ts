@@ -1,3 +1,5 @@
+import { log } from './log';
+
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -28,7 +30,7 @@ export function handle<C = unknown>(fn: (req: Request, ctx: C) => Promise<Respon
       return await fn(req, ctx);
     } catch (err) {
       if (err instanceof HttpError) return Response.json({ error: err.message }, { status: err.status });
-      console.error(err);
+      log('ERROR', 'unhandled route error', { method: req.method, path: new URL(req.url).pathname, error: err instanceof Error ? (err.stack ?? err.message).slice(0, 1500) : String(err) });
       return Response.json({ error: GENERIC_ERROR }, { status: 500 });
     }
   };

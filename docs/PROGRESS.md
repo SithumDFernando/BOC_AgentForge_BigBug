@@ -12,7 +12,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M3 Chat core | done (offline) | **no** |
 | M4 Enterprise API | done (offline) | **no** |
 | M5 Admin features | done (offline) | **no** |
-| M5b Cloud Run, monitoring, recovery | not started | — |
+| M5b Cloud Run, monitoring, recovery | files ready; **waiting on a human** | **no** |
 | M5c Website widget (P1) | not started | — |
 | M6 UI edits | not started | — |
 | M7 Public pages truth pass | not started | — |
@@ -21,6 +21,15 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 ## Blockers
 
 - **No live environment yet.** A git-ignored `.env` exists (Next.js and `npm run seed` both load it, like `.env.local`), but by length `FIREBASE_PRIVATE_KEY` (61 chars) and `OPENAI_API_KEY` (6 chars) are still placeholders, it predates the Vertex AI variables (`LLM_PROVIDER`, `GOOGLE_CLOUD_PROJECT`, `VERTEX_*`), and this machine has no `gcloud` or Application Default Credentials. Values were checked by length only and never printed. Fix: follow THIRD_PARTY_SETUP §2–3 and copy the new names from `.env.example`.
+
+## Needs a human
+
+_Steps that need `gcloud`, a billing account or a console (TASKS.md protocol rule 9)._
+
+1. **GCP project and Blaze billing, Firestore, rules, APIs, vector index, PITR, backups, local ADC**: [THIRD_PARTY_SETUP.md](THIRD_PARTY_SETUP.md) §2 steps 1–9 (exact commands there). Also fill the Vertex names from §3 in `.env` (copy them from `.env.example`). The current `.env` predates them, and its `FIREBASE_PRIVATE_KEY`/`OPENAI_API_KEY` are placeholders; with ADC you can leave both empty.
+2. **Gmail app password**: §4.
+3. **Cloud Run**: §5 steps 1–5 (service account and roles, secrets, deploy, `APP_BASE_URL`, uptime check), then §5 step 7 (`BASE_URL=<url> npm run verify`) once M8.1 exists. P1: §5 step 6 (log-based metrics and dashboard).
+4. **Old deployment housekeeping**: [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md) "Security housekeeping".
 
 ## Needs live verification
 
@@ -35,6 +44,7 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M5b.1 and M5b.2 done; M5b.3–M5b.5 wait on a human (see "Needs a human"). `output: 'standalone'`, a multi-stage `Dockerfile` (`node:22-slim`, `npm ci`, non-root `node` user, port 8080), `.dockerignore`, and a matching `.gcloudignore`, so `gcloud run deploy --source .` never uploads `.env*`, private notes or credentials. `handle()` now logs unhandled errors as structured ERROR lines (method, path, stack). Docker Desktop's daemon isn't running here, so the image build is unverified. Instead the standalone server was run directly: `/api/health` 200, `/walkwave` 200, `/admin/dashboard` → 307 to login, and a `Walkwave_Policies.pdf` upload parsed with the traced PDF worker, then stopped at Firestore (no credentials) with a structured error log.
 - 2026-10-10: M5.3 done; **M5 exit (offline) passed.** `GET /api/admin/stats`: Firestore `count()` for users, documents and escalations and `AggregateField.sum('tokens')` over `chat_history`, all tenant-scoped.
 - 2026-10-10: M5.2 done. `/api/admin/api-keys`: GET (active keys, the prefix as `key`, seed Timestamps converted to ISO), POST (name 1–80, only hash + prefix stored, the full key returned once), DELETE (revoke, 404 for another tenant). Actions recorded.
 - 2026-10-10: M5.1 done. `GET /api/escalation` (status pending/approved/rejected, else 400; a mismatched `tenantId` → 403) and `PATCH` (decision validated, note ≤ 1000 characters, transactional decide, 404/409). Dev-server checks for all three M5 routes: 401 anonymous, 403 cross-tenant, 400 on bad status, decision, name or id.
