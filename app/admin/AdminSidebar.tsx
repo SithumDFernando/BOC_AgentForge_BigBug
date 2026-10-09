@@ -10,9 +10,7 @@ const ADMIN_NAV = [
     group: 'Operations',
     items: [
       { label: 'Dashboard',       href: '/admin/dashboard',   icon: 'dashboard',          desc: 'Tenant overview' },
-      { label: 'Users & Access',  href: '/admin/users',       icon: 'group',              desc: 'Manage end users' },
       { label: 'Knowledge Base',  href: '/admin/documents',   icon: 'library_books',      desc: 'PDF policies & RAG' },
-      { label: 'Agent Settings',  href: '/admin/settings',    icon: 'settings',           desc: 'Configure Database Agent' },
       { label: 'API Keys',        href: '/admin/api-keys',    icon: 'key',                desc: 'System integrations' },
       { label: 'Website widget',  href: '/admin/widget',      icon: 'chat_bubble',        desc: 'Install on your site' },
     ],
@@ -21,9 +19,6 @@ const ADMIN_NAV = [
     group: 'Observability',
     items: [
       { label: 'Escalations',     href: '/admin/escalations', icon: 'warning',            desc: 'Human review queue' },
-      { label: 'Analytics',       href: '/admin/analytics',   icon: 'monitoring',         desc: 'Usage & costs' },
-      { label: 'Agent Activity',  href: '/admin/agents',      icon: 'robot_2',            desc: 'Agent usage & logs' },
-      { label: 'Export Reports',  href: '/admin/reports',     icon: 'download',           desc: 'Download CSV/PDF' },
     ],
   },
 ];

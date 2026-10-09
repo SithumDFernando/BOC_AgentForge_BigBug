@@ -15,6 +15,7 @@ export default function ChatPanel({ company, customerId, onClose, onBusy }: { co
   const inputRef = useRef<HTMLInputElement>(null);
   const abort = useRef<AbortController | null>(null);
   const name = demoCompanies[company].name;
+  const customerName = demoCompanies[company].customers.find(c => c.id === customerId)?.name;
   useEffect(() => { inputRef.current?.focus(); return () => abort.current?.abort(); }, []);
   useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [messages, loading]);
   useEffect(() => {
@@ -62,10 +63,10 @@ export default function ChatPanel({ company, customerId, onClose, onBusy }: { co
   }
   const suggestions = ['What is your return policy?', company === 'walkwave' ? 'Have my shoes shipped?' : 'What is my order status?', 'Email me my shipping update', 'I want a refund of LKR 75,000'];
   return <section className={`demo-chat ${company === 'nova' ? 'enterprise-chat' : ''}`} aria-label={`${name} assistant`}>
-    <header className="chat-heading"><div className="assistant-mark">{company === 'walkwave' ? 'w.' : 'N'}</div><div><strong>{name} {company === 'nova' ? 'Concierge' : 'Assistant'}</strong><span><i /> Here to help you</span></div>{onClose && <button aria-label="Close chat" onClick={onClose}>×</button>}</header>
+    <header className="chat-heading"><div className="assistant-mark">{company === 'walkwave' ? 'w.' : 'N'}</div><div><strong>{name} {company === 'nova' ? 'Concierge' : 'Assistant'}</strong><span><i /> {customerName ? `Signed in as ${customerName} (demo)` : 'Here to help you'}</span></div>{onClose && <button aria-label="Close chat" onClick={onClose}>×</button>}</header>
     <div className="chat-conversation" role="log" aria-live="polite" aria-relevant="additions text">
       <div className="chat-welcome"><span className="eyebrow">YOUR PERSONAL SUPPORT</span><h3>A little help.<br />A lot less waiting.</h3><p>Ask about our policies, check your order, or request an email update.</p></div>
-      {messages.map((m, i) => <div key={i} className={`chat-message ${m.role}`}><p>{m.content}</p>{m.actions?.length ? <div className="action-tags">{m.actions.map(a => <span key={a}>{a === 'queryDatabase' ? 'Order database checked' : a === 'sendEmail' ? 'Email workflow' : 'Manager review requested'}</span>)}</div> : null}{m.sources?.length ? <small>Source: {m.sources.join(', ')}</small> : null}</div>)}
+      {messages.map((m, i) => <div key={i} className={`chat-message ${m.role}`}><p>{m.content}</p>{m.actions?.length ? <div className="action-tags">{m.actions.map(a => <span key={a}>{a === 'queryDatabase' ? 'Order database checked' : a === 'sendEmail' ? 'Email workflow' : a === 'guardrailBlocked' ? 'Blocked by safety check' : 'Manager review requested'}</span>)}</div> : null}{m.sources?.length ? <small>Source: {m.sources.join(', ')}</small> : null}</div>)}
       {loading && <p className="chat-loading" role="status">Checking that for you…</p>}
       {ticket && <div className="ticket-status" role="status">Manager review: <strong>{decision}</strong>{decision !== 'pending' && <span> — no payment was executed in this demo.</span>}</div>}
       <div ref={end} />

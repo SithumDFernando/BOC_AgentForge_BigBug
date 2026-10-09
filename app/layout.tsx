@@ -4,7 +4,7 @@ import { AuthProvider } from './components/AuthProvider';
 
 export const metadata: Metadata = {
   title: "AgentForge Platform",
-  description: "Autonomous Enterprise Operations Control Plane",
+  description: "AI customer support companies can trust.",
 };
 
 export const viewport: Viewport = {
