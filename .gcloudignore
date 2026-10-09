@@ -1,0 +1,13 @@
+# gcloud run deploy --source . uploads the repo to Cloud Build; keep secrets and local state out.
+.env*
+!.env.example
+*_private.md
+credentials*
+*service-account*.json
+*-firebase-adminsdk-*.json
+node_modules
+.next
+.git
+coverage
+tsconfig.tsbuildinfo
+docs

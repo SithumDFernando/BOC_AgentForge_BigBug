@@ -1,0 +1,13 @@
+# Never send secrets or local state to the image build.
+.env*
+!.env.example
+*_private.md
+credentials*
+*service-account*.json
+*-firebase-adminsdk-*.json
+node_modules
+.next
+.git
+coverage
+tsconfig.tsbuildinfo
+docs
