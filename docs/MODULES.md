@@ -175,7 +175,9 @@ Steps run **in this order**. The first one that returns ends the request:
 3. **Agent** (unless `optionalEnv('AGENT_TOOLS') === 'off'`). Turns = the last 8 history turns and the message, all PII-scrubbed. Loop: `generate({ system: AGENT_PROMPT, turns, tools: TOOL_SPECS })`, run its tool calls with `runTool` (at most 3 tool calls per message in total; calls past the budget are rejected), append the calls and results, and repeat. Once the budget is spent, call without `tools`. Stop at the first reply with text and no tool calls (at most 4 model calls). Then the **output checks**, in order:
    - `getMyOrders` returned no orders → reply = "I couldn't find that order in your account."
    - Orders returned and `checkOrderFacts` fails → reply = their `describeOrder` lines (trace `check orderFacts replaced`). `checkOrderFacts` is true only if every returned order's `orderId`, and `trackingNumber` when present, appears in the reply, and no other `WW-`/`NV-` order ID or `-DEMO-` reference does.
-   - No tool was called (an ungrounded answer) → reply = "I can help with our policies, your orders, an email update, or a manager review. What would you like to know?"
+   - `getMyOrders` was refused with `not_signed_in` → reply = "Please sign in to check your personal orders."
+   - Every `searchPolicies` call found nothing and no other tool succeeded → reply = "I don't have company information about that yet."
+   - No tool succeeded (an ungrounded answer) → reply = "I can help with our policies, your orders, an email update, or a manager review. What would you like to know?"
    - The email outcome is appended by the server, never by the model: sent → "I've emailed this to you." · duplicate → "This email was already sent for this request." · failed → "I couldn't send the email right now. Nothing was sent." · resolver error → its message · `not_signed_in` → "Please sign in to get email updates."
    - `sources` = `state.sources`. `orders` and `escalationId` come from the tool state.
 4. **Rules (degraded mode).** Runs when step 3 throws `LlmUnavailableError` (trace `model … error`, logged as WARNING) or when `AGENT_TOOLS=off`. Same behavior as before D22:
