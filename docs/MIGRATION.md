@@ -4,7 +4,18 @@ The old repo (`BOC-2.0/my-app`) is public and contains leaked credentials. **Nev
 
 ## Already copied into this repo (2026-10-10)
 
-The frontend, configs, policy files and demo data, unchanged except for the tenant IDs in `lib/demo-config.ts` (`tnt_walkwave`, `tnt_nova`). The file-by-file list and required edits are in [UI.md](UI.md).
+The frontend, configs, policy files and demo data, unchanged except for the tenant IDs in `lib/demo-config.ts` (`tnt_walkwave`, `tnt_nova`) and the lint fixes in D14. The file-by-file list and required edits are in [UI.md](UI.md).
+
+**Re-synced on 2026-10-10** with the old repo's commit `c2d0621` (11 commits after the first copy at `dcd24ec`). Re-copied: the seven `app/(public)` pages and layout, `NavHeader`, `DemoStorefront`, `ChatPanel`, `demo.css`, `app/admin/escalations/page.tsx` and `next.config.ts`. Deleted: `app/(public)/demo` (removed upstream) and `AnimatedShader` (no longer used). Deliberately **not** re-synced:
+
+| Old-repo change | Why not |
+|---|---|
+| `lib/demo-config.ts`: `demoEnabled()` always `true` | SECURITY rule 10 keeps the `ENABLE_DEMO` gate (D18). Our tenant IDs stay |
+| Admin dashboard tile relabeled "Recorded Chats" | Our `tokenUsage` is real token usage, so "Token Usage" is correct |
+| `app/admin/AdminSidebar.tsx`: "Agent Activity" → "Website Agent" | We remove that item anyway (D11) |
+| `/api/demo/enterprise-chat` reading a plain key from Firestore; `VERCEL_PROJECT_PRODUCTION_URL` fallback | Server code is rebuilt, not copied; both conflict with D10 and D17 (D19) |
+| `/admin/users` customer-access changes, `/admin/agents`, analytics, reports, settings | Cut pages (D11) |
+| `walkwave/demo-runbook.md` | Its behavior notes are folded into UI.md and DEMO_RUNBOOK.md |
 
 | Copied | From |
 |---|---|
@@ -24,8 +35,8 @@ If you have access to the old repo, these files are useful **reference only** (b
 | Old file | Useful for |
 |---|---|
 | `my-app/lib/chat-service.ts` | Intent regexes, order reply wording, email idempotency with a transaction |
-| `my-app/lib/knowledge.ts` | pdf-parse v2 usage (`new PDFParse({ data }).getText()` + `destroy()`), chunk sizes |
-| `my-app/app/api/escalation/route.ts` | Tenant-scoped ticket decisions |
+| `my-app/lib/knowledge.ts` | pdf-parse v2 usage with the lazily loaded worker (`pdf-parse/worker`, `setWorker`, `CanvasFactory`, `destroy()`), chunk sizes |
+| `my-app/app/api/escalation/route.ts` | Tenant-scoped ticket decisions, the status filter, the same-tenant customer name lookup |
 | `my-app/app/api/v1/chat/route.ts` | Customer-belongs-to-key's-tenant check |
 
 ## Not carried over

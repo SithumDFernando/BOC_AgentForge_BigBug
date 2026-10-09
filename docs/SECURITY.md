@@ -35,7 +35,7 @@
 
 ## Known limitations (say these openly if judges ask)
 
-- Customer identity in the demo comes from a customer picker, not real customer authentication. Target: Identity Platform.
+- Customer identity in the demo is a shortcut, not real customer authentication. Walkwave signs in the demo customer Jane automatically when the assistant opens, and Nova uses a picker. Anyone who can reach a deployment with `ENABLE_DEMO=true` can act as one of the four seeded fictional customers (and only those). Target: Identity Platform.
 - Rate limiting is per instance and in memory. Target: Cloud Armor or Redis.
 - The guardrail injection check uses patterns and can be bypassed. The real protection is that the model has no tools and no access to data outside the provided context.
 - Personal data scrubbing uses regular expressions. Target: Cloud DLP.

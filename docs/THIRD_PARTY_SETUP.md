@@ -1,6 +1,6 @@
 # Third-Party Setup
 
-Four accounts are required. One more is optional. Nothing else: no Pinecone, no Gemini API key, no AWS, no Vercel.
+Four accounts are required. One more is optional. Nothing else: no Pinecone, no Gemini API key, no AWS, no Vercel. (The old repo's demo ran on Vercel, which isn't a platform the competition permits, so this repo doesn't use it. See D17.)
 
 Put every value into `.env.local` (copy it from `.env.example`). Never commit it.
 
@@ -53,7 +53,7 @@ Only after every P0 item works locally.
 3. Enable the APIs: Cloud Run, Cloud Build, Artifact Registry, Secret Manager.
 4. Store every secret from `.env.local` in Secret Manager. On Cloud Run, Application Default Credentials replace the `FIREBASE_*` service-account variables.
 5. `gcloud run deploy agentforge --source . --region asia-south1 --min-instances 1 --set-secrets ...`
-6. Set `APP_BASE_URL` to the Cloud Run URL, so the Nova server route calls the deployed API.
+6. Set `APP_BASE_URL` to the Cloud Run URL, so the Nova server route calls the deployed API. It has no fallback, so the deployed Nova page fails with a clear server log until it's set. Set `ENABLE_DEMO=true` only on a deployment meant for the demo.
 
 Keep the local version as the fallback for the live demo either way.
 

@@ -33,6 +33,7 @@ Body `{ "company": "walkwave" | "nova", "customerId": string }`.
 - `400` for an unknown company. `403` if `customerId` is not one of that company's customers in `lib/demo-config.ts`.
 - `409 { "error": "Demo data is not ready. Run npm run seed." }` if the user document is missing, inactive, not `isDemo`, or has a different tenant.
 - `200 { "success": true }` and sets the `session` cookie (role `user`, tenantId from the config, userId = customerId).
+- Callers: the Walkwave storefront calls it **automatically** with `walkwave_jane` (`customers[0]`) when the assistant opens and there's no Walkwave customer session yet; Walkwave has no picker. Nova's picker calls it with Alice or Sam. `npm run verify` calls it directly (that's how Bob signs in). See [UI.md](UI.md#demo-customer-sessions).
 
 ---
 
@@ -78,7 +79,8 @@ Header `Authorization: Bearer af_...`. Body `{ "message", "history"?, "requestId
 ### `POST /api/demo/enterprise-chat`: customer (Nova tenant only)
 Simulates Nova's own backend. The Nova page calls it from `ChatPanel.tsx`.
 - `401` unless the session is a customer of `tnt_nova`. `409` on an `expectedCustomerId` mismatch. `503` if `NOVA_DEMO_API_KEY` is unset.
-- Forwards `{ message, history, requestId, customerId: session.userId }` to `${APP_BASE_URL}/api/v1/chat` with `Authorization: Bearer ${NOVA_DEMO_API_KEY}`, a 50-second timeout, and `cache: 'no-store'`. Returns the upstream status and JSON unchanged.
+- `NOVA_DEMO_API_KEY` comes from the environment only. The old repo fell back to a plain key stored in `api_keys/nova_demo_key`; don't port that, because only the hash is ever stored (D10, D19).
+- Forwards `{ message, history, requestId, customerId: session.userId }` to `${APP_BASE_URL}/api/v1/chat` with `Authorization: Bearer ${NOVA_DEMO_API_KEY}`, a 50-second timeout, and `cache: 'no-store'`. Returns the upstream status and JSON unchanged. `APP_BASE_URL` is required: `http://localhost:3000` locally, the deployed app's own URL when hosted. There is no platform-specific fallback (the old repo read Vercel's `VERCEL_PROJECT_PRODUCTION_URL`, D19).
 - `502 { "error": "Nova could not reach its AgentForge API integration." }` on network failure.
 
 ---
@@ -114,9 +116,11 @@ Body `{ "name": string }` (1–80 characters).
 ### `DELETE /api/admin/api-keys?id=<keyId>`
 Sets `isActive: false` (revoke). `404` if the key belongs to another tenant. `200 { "success": true }`.
 
-### `GET /api/escalation?status=pending[&tenantId=...]`
-- If `tenantId` is present and ≠ `session.tenantId` → `403`. The copied UI sends it, so accept it when it matches.
-- `200 { "escalations": [{ "id", "tenantId", "userId", "reason", "userMessage", "amount": number|null, "urgency": "high", "status", "createdAt", "adminNote", "decidedAt" }], "count" }`. Filtered by `status` (default `pending`), newest first.
+### `GET /api/escalation?status=pending|approved|rejected[&tenantId=...]`
+- `status` defaults to `pending`; any other value → `400`.
+- If `tenantId` is present and ≠ `session.tenantId` → `403`. The re-synced UI no longer sends it, but keep the check (verify case 15).
+- `200 { "escalations": [{ "id", "tenantId", "userId", "customerName": string|null, "customerEmail": string|null, "reason", "userMessage", "reviewRule", "amount": number|null, "urgency": "high", "status", "createdAt", "adminNote", "decidedAt" }], "count" }`. Newest first, at most 100.
+- `customerName` and `customerEmail` are read from `users/{userId}` and returned only when that user has the same `tenantId`; otherwise `null`. The escalations page shows them.
 
 ### `PATCH /api/escalation`
 Body `{ "id": string, "decision": "approved"|"rejected", "adminNote"?: string }`. Any `adminId` in the body is ignored; use the session.

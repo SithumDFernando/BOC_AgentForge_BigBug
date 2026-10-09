@@ -8,7 +8,7 @@ A hackathon demo for Beauty of Cloud 2.0 (Scenario 5: AI Agent Platform for Busi
 
 ## Current state
 
-The frontend is copied in from the previous repo. The server side (`lib/` except `demo-config.ts`, `app/api/**`, `middleware.ts`, `scripts/`) is **not built yet**. Build it by following [docs/TASKS.md](docs/TASKS.md), and log progress in [docs/PROGRESS.md](docs/PROGRESS.md).
+The frontend is copied in from the previous repo (re-synced 2026-10-10, see [docs/MIGRATION.md](docs/MIGRATION.md)). The server side is being built by following [docs/TASKS.md](docs/TASKS.md): M0 and M1 (env, db, http, auth, `proxy.ts`, auth and demo-login routes, seed) are done, M2 onward is not. Log progress in [docs/PROGRESS.md](docs/PROGRESS.md). Nothing is hosted yet; the app runs locally.
 
 ## Docs: read in this order
 
@@ -47,7 +47,7 @@ npm run verify     # live HTTP tests against a running server (needs .env.local)
 ## Layout
 
 ```
-app/(public)/            marketing pages + API reference (no false claims)
+app/(public)/            marketing pages + integration guide (no false claims)
 app/walkwave, app/nova   demo company sites (widget / custom UI)
 app/admin/               company admin portal
 app/api/**/route.ts      thin handlers: auth → validate → call lib → respond

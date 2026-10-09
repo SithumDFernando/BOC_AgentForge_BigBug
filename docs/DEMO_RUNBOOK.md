@@ -13,7 +13,7 @@
 
 - [ ] Phone hotspot ready as a network fallback.
 - [ ] `npm run build && npm start` (production mode, not `dev`). This is faster and has no dev overlay.
-- [ ] Browser profile 1: Walkwave as Jane, bubble closed. Browser profile 2: Walkwave admin, logged in, on Escalations. Browser profile 3: Nova as Alice.
+- [ ] Browser profile 1: Walkwave, bubble closed (opening it signs in Jane automatically; open it once beforehand to check). Browser profile 2: Walkwave admin, logged in, on Escalations. Browser profile 3: Nova with Alice picked. Walkwave and Nova share one session cookie per profile, so never open the Walkwave bubble in the Nova profile.
 - [ ] Old test tickets rejected or cleared, so the new one is obvious.
 - [ ] `Walkwave_Policies.pdf` on the desktop for the upload step. The policy is already indexed, so answers still work if the live upload fails.
 - [ ] Zoom the browser to 125% so the audience can read it. Turn notifications off.

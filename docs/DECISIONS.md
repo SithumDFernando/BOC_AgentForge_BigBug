@@ -49,3 +49,12 @@ Generated keys are always `af_` + 48 hex, but `NOVA_DEMO_API_KEY` is created by 
 
 ### D16. The seed preserves counters and creation times (agent decision, M1.5)
 TASKS.md lists `usageCount: 0, lastUsed: null, createdAt` for the Nova key and also requires a safe, repeatable seed. A plain merge would reset the key's usage (and the dashboard's real numbers) on every run. Those fields, and `createdAt` on every seeded doc, are written only when the document doesn't exist. Every other field is merged each run, so rotating a password or `NOVA_DEMO_API_KEY` in `.env.local` and re-seeding updates the hash.
+
+### D17. No Vercel hosting; D12 unchanged (agent decision, frontend re-sync)
+The old repo's last commits hosted its demo on Vercel (a `VERCEL_PROJECT_PRODUCTION_URL` fallback for the API address, and PDF-worker packaging for Vercel functions). This repo doesn't adopt Vercel. It isn't one of the cloud platforms the finalist rules permit (AWS, GCP, Azure), and nothing in this repo has been deployed there, so naming it would be a false claim. We keep only the platform-neutral part of that work, the PDF runtime isolation ([MODULES.md](MODULES.md#libknowledgets)), which a Cloud Run standalone build also needs. Hosting stays as D12 says (local first, Cloud Run as F10). Whether Cloud Run should be promoted to P0 is a separate decision for the team.
+
+### D18. Walkwave opens with an automatic demo customer session (refines D7, re-sync)
+The old repo removed Walkwave's customer picker: opening the assistant signs in `walkwave_jane` through `POST /api/demo/login`. Nova keeps its picker. We keep this, because it removes a step from the stage demo. We did **not** keep the old repo's other change, which made `demoEnabled()` always return `true`. Demo sessions still need `ENABLE_DEMO=true` (SECURITY rule 10), and the route still accepts only the seeded `isDemo` customers of `lib/demo-config.ts`. D7 otherwise stands: demo identity is not real customer authentication.
+
+### D19. The Nova key stays in the environment, never in Firestore in plain text (re-sync)
+The old repo's `/api/demo/enterprise-chat` fell back to reading a plain-text key from `api_keys/nova_demo_key` when `NOVA_DEMO_API_KEY` was unset. That breaks D10 (only the SHA-256 hash is stored), so it isn't ported. The seed stores only `keyHash` and `prefix`. The route reads the key from `env('NOVA_DEMO_API_KEY')` and calls `APP_BASE_URL` with no platform-specific fallback.

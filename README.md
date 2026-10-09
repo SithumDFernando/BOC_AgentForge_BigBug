@@ -13,7 +13,7 @@ npm run seed
 npm run dev                  # http://localhost:3000
 ```
 
-- Walkwave (chat widget): http://localhost:3000/walkwave
+- Walkwave (chat widget; opening it signs in the demo customer Jane): http://localhost:3000/walkwave
 - Nova (custom UI via API): http://localhost:3000/nova
 - Admin portal: http://localhost:3000/admin/login
 

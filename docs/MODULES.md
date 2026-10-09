@@ -83,7 +83,8 @@ export async function deleteDocument(tenantId: string, docId: string): Promise<v
 export async function searchKnowledge(tenantId: string, question: string): Promise<{ text: string; sources: string[] }>
 export function cosine(a: number[], b: number[]): number
 ```
-- `extractText`: size 1 B–4 MB, `.txt` → UTF-8 decode, `.pdf` → `pdf-parse` v2 (`new PDFParse({ data }).getText()`, then always `destroy()`). Anything else → HttpError 400 "Please upload a PDF or TXT file."
+- `extractText`: size 1 B–4 MB, `.txt` → UTF-8 decode, `.pdf` → `pdf-parse` v2. Anything else → HttpError 400 "Please upload a PDF or TXT file."
+- **PDF runtime isolation** (from the old repo's commit `cf5b195`): never import `pdf-parse` at the top of the module. Inside the `.pdf` branch only: `const { CanvasFactory, getData } = await import('pdf-parse/worker')`, then `const { PDFParse } = await import('pdf-parse')`, `PDFParse.setWorker(getData())`, `new PDFParse({ data, CanvasFactory }).getText()`, and always `destroy()` in `finally`. This way chat and `searchKnowledge`, which import this module, never load PDF.js or the native canvas. `next.config.ts` already lists `pdf-parse`, `pdfjs-dist` and `@napi-rs/canvas` in `serverExternalPackages` and traces the worker and canvas files into `/api/admin/documents` (`outputFileTracingIncludes`), which a standalone build (the F10 Dockerfile) needs. `@napi-rs/canvas` is already a dependency of `pdf-parse`, not a new one.
 - `chunkText`: normalize `\r`, trim. Empty → HttpError 400 "No readable text found. Use a PDF with selectable text; scanned PDFs need OCR." Over 80,000 characters → HttpError 400. Window 1300 characters, step 1100 (200 overlap).
 - `indexDocument`: `docId` defaults to a UUID. Steps: chunk → `embed` all → write `knowledge_chunks/{docId}_{i}` in batched writes (≤ 400 per batch) → **then** write `documents/{docId}` with `status: 'indexed'`. On any failure after writes began, delete the chunks written so far, then rethrow. Seeding reuses this function with fixed ids (`demo_walkwave_policy`, `demo_nova_policy`), so it's idempotent: delete existing chunks for that docId first.
 - `searchKnowledge`: embed the question → load `knowledge_chunks` where `tenantId ==` → keep only chunks whose `docId` is in the tenant's `documents` → cosine rank → top 5 with score ≥ 0.2. Return the chunk contents joined with `\n---\n` and the unique document titles. If nothing passes, return `{ text: '', sources: [] }`.
@@ -106,11 +107,13 @@ export async function sendEmail(i: { tenantId; userId; requestId; to; subject; b
 
 ## `lib/escalations.ts`
 ```ts
-export async function createEscalation(i: { tenantId; userId; requestId; reason; userMessage; amount: number | null }): Promise<string>  // id
+export async function createEscalation(i: { tenantId; userId; requestId; reason; userMessage; reviewRule; amount: number | null }): Promise<string>  // id
+export async function listEscalations(tenantId: string, status: 'pending'|'approved'|'rejected'): Promise<EscalationView[]>
 export async function getEscalation(id: string): Promise<Escalation | null>
 export async function decideEscalation(tenantId: string, adminId: string, id: string, decision: 'approved'|'rejected', note?: string): Promise<void>
 ```
-- id = `${tenantId}_${userId}_${requestId}`, created in a transaction only if absent (idempotent). `urgency: 'high'`, `status: 'pending'`.
+- id = `${tenantId}_${userId}_${requestId}`, created in a transaction only if absent (idempotent). `urgency: 'high'`, `status: 'pending'`. `reason` is the short fixed text "Refund request requires a manager decision."; `userMessage` is the customer's message; `reviewRule` is the rule that fired: "Refunds above LKR {refundLimit} need manager review." or "The customer asked for a manager."
+- `listEscalations`: `where tenantId ==`, filter `status` and sort newest first in memory, at most 100. Adds `customerName`/`customerEmail` from `users/{userId}` only when that user's `tenantId` matches; otherwise `null`.
 - `decideEscalation`: transaction. Missing or other tenant → HttpError 404. Not pending → HttpError 409.
 
 ## `lib/chat.ts`: the router
@@ -122,7 +125,7 @@ export function detectIntent(message: string): { refund: boolean; wantsHuman: bo
 Steps run **in this order**. The first one that returns ends the request:
 
 1. **Guardrail.** `detectInjection(message)` → log `agent_actions` (type `guardrail`), action `guardrailBlocked`, reply: *"I can't help with that request. I can answer questions about our policies or your own orders."*
-2. **Refund review.** `refund` = `/refund|reimburs|money back|chargeback/i`. `parseAmounts` removes order IDs (`/\b(?:WW|NV)-\d{4}\b/gi`) first, then reads numbers with an optional `LKR|Rs.?` prefix, commas allowed. Escalate if `refund && (max(amount) > company.refundLimit || wantsHuman)`, where `wantsHuman` = `/manager|human|supervisor|real person/i`. Without a `userId` → "Please sign in before requesting a refund review." Otherwise `createEscalation` → action `escalateToHuman`, reply: *"Your refund request has been sent to a manager for review. No refund has been issued yet. You'll see the decision here."* Include `escalationId`.
+2. **Refund review.** `refund` = `/refund|reimburs|money back|chargeback/i`. `parseAmounts` removes order IDs (`/\b(?:WW|NV)-\d{4}\b/gi`) first, then reads numbers with an optional `LKR|Rs.?` prefix, commas allowed. Escalate if `refund && (max(amount) > company.refundLimit || wantsHuman)`, where `wantsHuman` = `/manager|human|supervisor|real person/i`. Without a `userId` → "Please sign in before requesting a refund review." Otherwise `createEscalation` (with `reviewRule` as in `lib/escalations.ts`) → action `escalateToHuman`, reply: *"Your refund request has been sent to a manager for review. No refund has been issued yet. You'll see the decision here."* Include `escalationId`.
 3. **Order.** `order` = orderId match, or `/\border(s)?\b|shipp|tracking|deliver(y|ed) status|my (shoes|laptop|headphones|package)|that update|shipping update/i` and not `/return policy|delivery policy|refund policy/i`. Without a userId → "Please sign in to check your personal orders." Otherwise `getCustomerOrders` → action `queryDatabase`. With no orders → "I couldn't find that order in your account." Otherwise the content is the `describeOrder` lines. **The model is not called.**
 4. **Policy answer** (when not an order): `searchKnowledge`. Empty → "I don't have company information about that yet." Otherwise call `generate` with the prompt below; sources = the titles.
 5. **Email.** `email` = `/\b(e-?mail|mail)\s+(me|my|this|that|the|it)\b|\bsend\b.*\b(e-?mail|inbox)\b/i`. Runs after step 3 or 4 using that step's content. Needs a userId and an active user in the same tenant. `resolveRecipient(user, extractEmail(original message))` → `sendEmail` → action `sendEmail`. Append to the reply: sent → "I've emailed this to you." · duplicate → "This email was already sent for this request." · failed → "I couldn't send the email right now. Nothing was sent." · resolver error → its message.
@@ -149,3 +152,5 @@ Customer question: {scrubbed message}
 
 ## `lib/demo-config.ts`
 Already copied. It holds the two companies, tenant IDs (`tnt_walkwave`, `tnt_nova`), refund limits and customers, and the UI imports it. Keep it import-safe in the browser: no server imports.
+- `demoEnabled()` returns `process.env.ENABLE_DEMO === 'true'`. The old repo changed it to always return `true`; we didn't port that (SECURITY rule 10, D18). It's read by the storefront pages at request time (`dynamic = 'force-dynamic'`) and by `/api/demo/login`.
+- The order of `customers` matters: Walkwave's storefront signs in `customers[0]` (`walkwave_jane`) automatically.

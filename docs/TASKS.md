@@ -12,7 +12,7 @@ Read first, in this order: [CLAUDE.md](../CLAUDE.md) → [SPEC.md](SPEC.md) → 
 4. Update [PROGRESS.md](PROGRESS.md) after each task: tick it, and note anything skipped, assumed or blocked.
 5. **Missing secrets don't block you.** If `.env.local` is absent, build everything, cover it with mocked unit tests, mark live checks as "needs live verification" in PROGRESS.md, and continue. Never invent or hardcode credentials.
 6. **Don't ask questions; decide.** If the docs don't cover something, choose the simplest option consistent with SPEC, SECURITY and DECISIONS, then record it as a new entry in DECISIONS.md.
-7. **Stay in scope.** Don't add features, pages, routes or dependencies beyond the docs. The allowed new dependencies are `openai`, `firebase-admin`, `vitest`, `tsx`, and `pdf-parse` (already listed).
+7. **Stay in scope.** Don't add features, pages, routes or dependencies beyond the docs. The allowed new dependencies are `openai`, `firebase-admin`, `vitest`, `tsx`, and `pdf-parse` (already listed). The PDF worker's `@napi-rs/canvas` comes with `pdf-parse`; don't add it separately.
 8. **Don't edit** SPEC.md acceptance criteria or SECURITY.md rules. If one is impossible, explain why in PROGRESS.md and carry on with the rest.
 9. Stop when M8 is done, or if the same failure persists after 3 different fix attempts. Then write a clear blocker note in PROGRESS.md.
 
@@ -33,12 +33,12 @@ Read first, in this order: [CLAUDE.md](../CLAUDE.md) → [SPEC.md](SPEC.md) → 
 - [ ] M1.3 `middleware.ts` (or `proxy.ts`) protecting `/admin/*` except `/admin/login`.
 - [ ] M1.4 Routes: `POST /api/auth/admin-login`, `POST /api/auth/logout`, `GET /api/auth/session`, `POST /api/demo/login`.
 - [ ] M1.5 `scripts/seed.ts` (see "Seed data" below). Idempotent: fixed document IDs, `set` with merge, safe to run repeatedly. Never deletes other data.
-- **Exit:** check passes. Live (if env is present): seed runs twice cleanly; admin login and the demo picker work in the browser.
+- **Exit:** check passes. Live (if env is present): seed runs twice cleanly; admin login works, opening the Walkwave bubble signs in Jane, and the Nova picker works in the browser.
 
 ## M2: Knowledge (F1)
 
 - [ ] M2.1 `lib/llm.ts` (`generate`, `embed`).
-- [ ] M2.2 `lib/knowledge.ts` (extract, chunk, index with rollback, delete, search, cosine) + `knowledge.test.ts`.
+- [ ] M2.2 `lib/knowledge.ts` (extract with the PDF parser loaded lazily inside the PDF branch, chunk, index with rollback, delete, search, cosine) + `knowledge.test.ts`.
 - [ ] M2.3 `/api/admin/documents` GET/POST/DELETE.
 - [ ] M2.4 Seed indexes `data/walkwave/policies.md` and `data/nova/policies.md` through `indexDocument`, with fixed ids `demo_walkwave_policy` and `demo_nova_policy`.
 - **Exit:** check passes. Live: upload `public/demo/Walkwave_Policies.pdf` in the admin UI → indexed.
@@ -54,12 +54,12 @@ Read first, in this order: [CLAUDE.md](../CLAUDE.md) → [SPEC.md](SPEC.md) → 
 ## M4: Enterprise API (F6)
 
 - [ ] M4.1 `POST /api/v1/chat` (key lookup by hash, customer-tenant check, usage counter, rate limit).
-- [ ] M4.2 `POST /api/demo/enterprise-chat` (server-to-server forward with `APP_BASE_URL`).
+- [ ] M4.2 `POST /api/demo/enterprise-chat` (server-to-server forward with `APP_BASE_URL`; key from `NOVA_DEMO_API_KEY` only, D19).
 - **Exit:** check passes. Live: the Nova page as Alice shows NV-1001, and the raw JSON panel is filled in.
 
 ## M5: Admin features (F5, F8)
 
-- [ ] M5.1 `GET`/`PATCH /api/escalation` (transactional decision).
+- [ ] M5.1 `GET`/`PATCH /api/escalation` (status filter, customer name/email from the same tenant, transactional decision).
 - [ ] M5.2 `/api/admin/api-keys` GET/POST/DELETE (hashed, shown once, revoke).
 - [ ] M5.3 `GET /api/admin/stats` (real counts, `tokenUsage` = sum of `chat_history.tokens`).
 - **Exit:** check passes. Live: reject a ticket in admin → Jane's bubble shows "rejected" within 5 seconds.
@@ -72,7 +72,7 @@ Read first, in this order: [CLAUDE.md](../CLAUDE.md) → [SPEC.md](SPEC.md) → 
 
 ## M7: Public pages truth pass (F9)
 
-- [ ] M7.1 Rewrite the content of home, architecture, security and docs (API reference); edit pricing and login per [UI.md](UI.md).
+- [ ] M7.1 The re-sync already replaced these pages with short, honest versions. Apply the remaining "Edit" rows for home, security, docs and login in [UI.md](UI.md).
 - [ ] M7.2 The forbidden-claims grep in UI.md prints nothing; Target/Roadmap labels checked by hand.
 - **Exit:** check passes.
 
@@ -102,7 +102,7 @@ It reads `.env.local` with `@next/env` `loadEnvConfig`, uses `lib/db.ts` and `li
 | `business_admins/nova_admin` | same shape, `tnt_nova`, `admin@nova.example`, `NOVA_ADMIN_PASSWORD` |
 | `users/walkwave_jane`, `walkwave_bob`, `nova_alice`, `nova_sam` | `{ tenantId, name, email: '<name>@<company>.example', isActive: true, isDemo: true }` (names and IDs from `lib/demo-config.ts`) |
 | `demo_orders/WW-1001` … `NV-1002` | the 4 rows in [SPEC.md](SPEC.md#seed-orders), plus `currency: 'LKR'` |
-| `api_keys/nova_demo_key` | `{ tenantId: 'tnt_nova', name: 'Nova server integration', keyHash: sha256(NOVA_DEMO_API_KEY), prefix, isActive: true, usageCount: 0, lastUsed: null, createdAt }` |
+| `api_keys/nova_demo_key` | `{ tenantId: 'tnt_nova', name: 'Nova server integration', keyHash: sha256(NOVA_DEMO_API_KEY), prefix, isActive: true, usageCount: 0, lastUsed: null, createdAt }`. Never a plain `key` field (the old repo stored one, D19) |
 | `documents/demo_walkwave_policy` + chunks | `indexDocument` with `data/walkwave/policies.md`, title "Walkwave policies" |
 | `documents/demo_nova_policy` + chunks | `indexDocument` with `data/nova/policies.md`, title "Nova Electronics policies" |
 

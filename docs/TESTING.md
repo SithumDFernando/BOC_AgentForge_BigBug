@@ -65,7 +65,7 @@ Runs against `BASE_URL` (default `http://localhost:3000`) with real HTTP. It kee
 | 11 | Bob | `GET /api/escalation/{id from 10}` | 404 |
 | 12 | Nova admin | `PATCH /api/escalation` on the ticket from 10 | 404 (other tenant) |
 | 13 | Walkwave admin | `GET /api/escalation?status=pending` | contains the ticket |
-| 14 | Walkwave admin | `PATCH` reject the ticket | 200; repeating it → 409; Jane's `GET` → `rejected` |
+| 14 | Walkwave admin | `PATCH` reject the ticket with `adminNote` | 200; repeating it → 409; Jane's `GET` → `rejected`; `GET /api/escalation?status=rejected` contains it with the note and `customerName: "Jane"` |
 | 15 | Walkwave admin | `GET /api/escalation?tenantId=tnt_nova` | 403 |
 | 16 | anonymous | `POST /api/v1/chat` with a bad key | 401 |
 | 17 | API key (`NOVA_DEMO_API_KEY`) | v1 chat as `nova_alice` "What is my order status?" | reply contains `NV-1001` |

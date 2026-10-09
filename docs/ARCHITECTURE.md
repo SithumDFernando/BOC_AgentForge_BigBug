@@ -28,6 +28,10 @@ Next.js 16 app (App Router, Node runtime): local, or Cloud Run if F10 is done
         └──► Gmail SMTP (app password)
 ```
 
+### Where it runs
+
+Today this repo runs only on a laptop (`npm run build && npm start`). Nothing from it is hosted yet. Cloud Run is F10 (D12). The old repo's demo ran on **Vercel**; this repo doesn't use Vercel, because it isn't one of the platforms the competition permits (AWS, GCP, Azure) and nothing here was deployed there (D17). Don't describe Vercel or Cloud Run as running unless it's true at the time.
+
 ### Request flow: customer chat message
 
 1. The route handler reads the session. Missing session or wrong role → 401. `tenantId` and `userId` come from the session only.
@@ -56,7 +60,7 @@ A tenant has fewer than about 200 chunks. Each query loads that tenant's chunks 
 | `demo_orders/{orderId}` | tenantId, customerId, productName, shippingStatus, trackingNumber, estimatedDelivery, totalAmount, currency | seed |
 | `documents/{docId}` | tenantId, title, filename, status, chunkCount, createdAt | upload |
 | `knowledge_chunks/{docId_i}` | tenantId, docId, title, content, embedding (number[]) | upload |
-| `escalations/{tenant_user_requestId}` | tenantId, userId, reason, userMessage, amount, urgency, status, adminId, adminNote, decidedAt, createdAt | chat / admin |
+| `escalations/{tenant_user_requestId}` | tenantId, userId, reason, userMessage, reviewRule, amount, urgency, status, adminId, adminNote, decidedAt, createdAt | chat / admin |
 | `api_keys/{id}` | tenantId, name, keyHash, prefix, isActive, usageCount, lastUsed | admin / seed |
 | `email_requests/{tenant_user_requestId}` | status | chat |
 | `chat_history/{auto}` | tenantId, userId, message (PII-scrubbed), reply, actions, tokens, createdAt | chat |
@@ -80,6 +84,6 @@ Firestore rules: `allow read, write: if false;` on everything. Only the server, 
 | Secrets | Secret Manager | No keys in env files or images |
 | Async work | Pub/Sub → Cloud Run jobs (email, notifications) | Retries without blocking chat |
 | Audit | Cloud Logging → BigQuery sink | Queryable decision audit |
-| Identity | Identity Platform for customers and admins | Replaces the demo customer picker |
+| Identity | Identity Platform for customers and admins | Replaces the demo customer sessions (Walkwave's automatic sign-in, Nova's picker) |
 
 Migration path from Part A: change the `lib/llm` implementation; replace the in-memory cosine search with `findNearest`; move email into a Pub/Sub consumer. Route handlers and the data model don't change.
