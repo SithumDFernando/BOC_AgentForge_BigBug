@@ -43,3 +43,6 @@ Local `npm start` is the primary demo environment. Cloud Run in the same Firebas
 
 ### D14. Minimal lint fixes in copied UI files (agent decision, M0.1)
 `npm run check` must pass, but the copied UI had 8 ESLint errors. Fixed with the smallest possible edits and no behavior change: escaped two apostrophes on `/login`, replaced `any` with a `SessionUser` type in `AuthProvider` (UI.md allows this) and an `Escalation` type on the escalations page, moved two `useEffect` calls below the functions they call, and suppressed `react-hooks/set-state-in-effect` on three effects with a reason (each fetch function awaits before setting state, so the rule's warning is a false positive).
+
+### D15. API-key auth accepts any bearer token shape (agent decision, M1.2)
+Generated keys are always `af_` + 48 hex, but `NOVA_DEMO_API_KEY` is created by a human from `.env.example`, which only says "long random value". `requireApiKey` therefore accepts any 8–200 character bearer token and authorizes only on an exact sha256 hash match with `isActive: true`. Rejecting by format would add no security (an unknown hash already fails) and would break the demo for a key in another format.
