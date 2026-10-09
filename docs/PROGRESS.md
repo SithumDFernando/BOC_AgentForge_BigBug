@@ -15,7 +15,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M5b Cloud Run, monitoring, recovery | files ready; **waiting on a human** | **no** |
 | M5c Website widget (P1) | done (offline) | **no** |
 | M6 UI edits | done | n/a |
-| M7 Public pages truth pass | not started | — |
+| M7 Public pages truth pass | done | n/a |
 | M8 Verification | not started | — |
 
 ## Blockers
@@ -45,6 +45,8 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M7.2 done; **M7 exit passed.** The forbidden-claims grep prints nothing; no page names Vertex AI, Cloud Run or any other target service, PDPA, or "compliant", so there's nothing to Target-label. The "Where it runs" list on `/architecture` waits until Cloud Run is live. `/`, `/security`, `/docs`, `/architecture`, `/login`, `/pricing` all render 200.
+- 2026-10-10: M7.1 done. Home: the email feature text (verified or approved address), step 02 "Connect your website", step 03 without agent activity. Security: an honest email rule, a new "Assistant actions" item, demo accounts as a shortcut, a "Known limitations" section. Docs: the cut-page bullets removed, error codes added, a new `#widget` install section. Architecture: step 3 names the four server-checked tools. Login: the dead `/ops/login` card replaced by "Try the demo stores".
 - 2026-10-10: M6.2 done; **M6 exit passed** (one dead link left for M7.1). The dashboard now has loading and error states and no longer shows placeholder zeros when stats fail (rule 8). The documents and API-keys pages show a failed list load instead of an empty table, and API-keys shows page-level errors outside its modal. Link crawl with an admin session: every internal `href` and nav target returns 200, except `/ops/login` on the public login page, which is a UI.md public-page edit fixed in M7.1.
 - 2026-10-10: M6.1 done. `app/layout.tsx` description; the admin sidebar keeps only Dashboard, Knowledge Base, API Keys, Website widget and Escalations; the chat panel shows "Signed in as {name} (demo)" (F2) and labels `guardrailBlocked`; the escalations page explains our actual rule (no "foreign-currency" rule) and shows `amount` as `LKR 75,000`. The storefront needed no edits after the re-sync.
 - 2026-10-10: M5c.4 done; **M5c exit (offline) passed.** The seed writes `tenants/tnt_nova.widget` (enabled, "Nova Assistant", `#3159cc`, origins = the `APP_BASE_URL` origin + `http://localhost:4000`) only when no widget config exists, so admin edits survive re-seeding; `APP_BASE_URL` is now required by the seed. `npm run widget-site` (`scripts/widget-site.ts`) serves a fictional partner page on port 4000 that embeds `widget.js` cross-origin. `/` plays a company backend (its `/api/support/widget-token` calls `POST /api/widget/session` with `NOVA_DEMO_API_KEY` for Alice); `/guest` is anonymous. Checked: both pages serve, the snippet points at `APP_BASE_URL`, and the token endpoint proxies to AgentForge (401 here without a real key).
