@@ -13,7 +13,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 | M4 Enterprise API | done (offline) | **no** |
 | M5 Admin features | done (offline) | **no** |
 | M5b Cloud Run, monitoring, recovery | files ready; **waiting on a human** | **no** |
-| M5c Website widget (P1) | not started | — |
+| M5c Website widget (P1) | in progress | — |
 | M6 UI edits | not started | — |
 | M7 Public pages truth pass | not started | — |
 | M8 Verification | not started | — |
@@ -44,6 +44,7 @@ _Items built and unit-tested but not yet run against real Firestore, Vertex AI o
 
 ## Log
 
+- 2026-10-10: M5c.1 done. `lib/widget.ts`: `siteOrigin` (HTTPS, no path or credentials, HTTP only for localhost), `validateWidgetConfig`, `getWidgetConfig` (a missing or invalid stored config means disabled), `allowedWidget` (one 403 for unknown company, disabled widget or unlisted origin), and widget tokens (`issueWidgetToken`, `verifyWidgetToken`, `requireWidget`, which re-checks the origin and customer on every request). Tokens have their own issuer/audience and no `role`, so they can't stand in for session cookies and vice versa. `widget.test.ts`: 23 tests, including a session token, a wrong audience, a wrong secret, a removed origin, and no fallback secret.
 - 2026-10-10: M5b.1 and M5b.2 done; M5b.3–M5b.5 wait on a human (see "Needs a human"). `output: 'standalone'`, a multi-stage `Dockerfile` (`node:22-slim`, `npm ci`, non-root `node` user, port 8080), `.dockerignore`, and a matching `.gcloudignore`, so `gcloud run deploy --source .` never uploads `.env*`, private notes or credentials. `handle()` now logs unhandled errors as structured ERROR lines (method, path, stack). Docker Desktop's daemon isn't running here, so the image build is unverified. Instead the standalone server was run directly: `/api/health` 200, `/walkwave` 200, `/admin/dashboard` → 307 to login, and a `Walkwave_Policies.pdf` upload parsed with the traced PDF worker, then stopped at Firestore (no credentials) with a structured error log.
 - 2026-10-10: M5.3 done; **M5 exit (offline) passed.** `GET /api/admin/stats`: Firestore `count()` for users, documents and escalations and `AggregateField.sum('tokens')` over `chat_history`, all tenant-scoped.
 - 2026-10-10: M5.2 done. `/api/admin/api-keys`: GET (active keys, the prefix as `key`, seed Timestamps converted to ISO), POST (name 1–80, only hash + prefix stored, the full key returned once), DELETE (revoke, 404 for another tenant). Actions recorded.

@@ -214,9 +214,10 @@ export function validateWidgetConfig(value: unknown): WidgetConfig   // name 1â€
 export async function getWidgetConfig(tenantId: string): Promise<WidgetConfig>   // tenants/{id}.widget, or disabled if absent
 export async function allowedWidget(tenantId: unknown, origin: unknown): Promise<{ tenantId: string; origin: string; config: WidgetConfig }>
 export async function issueWidgetToken(tenantId: string, origin: string, customerId?: string): Promise<{ token: string; expiresAt: string; customer: { id: string; name: string } | null; name: string }>
+export async function verifyWidgetToken(token: string): Promise<{ tenantId: string; origin: string; customerId?: string }>   // HttpError 401
 export async function requireWidget(req: Request): Promise<{ tenantId: string; origin: string; config: WidgetConfig; customer?: { userId: string; name: string; email: string; isDemo: boolean } }>
 ```
-- Tokens: HS256 with `env('JWT_SECRET')` (no fallback), `iss`/`aud` `agentforge-widget`, 30 minutes, claims `{ tenantId, origin, customerId? }`. `requireWidget` reads `Authorization: Bearer`, verifies the token, re-checks that the origin is still allowed and the customer is still an active user of that tenant, and throws HttpError 401/403.
+- Tokens: HS256 with `env('JWT_SECRET')` (no fallback), `iss`/`aud` `agentforge-widget`, 30 minutes, claims `{ tenantId, origin, customerId? }` and **no** `role`, so `verifySession` never accepts one, and a session cookie (no audience) is never a widget token. An unknown company, a disabled widget and an unlisted origin all get the same 403 (no tenant enumeration). `requireWidget` reads `Authorization: Bearer`, verifies the token, re-checks that the origin is still allowed and the customer is still an active user of that tenant, and throws HttpError 401/403.
 - A customer is attached only by a token issued with the company's API key (`/api/widget/session`) or, for the Nova demo, by `/api/demo/widget-token` with `ENABLE_DEMO=true`.
 
 ## `lib/demo-config.ts`
