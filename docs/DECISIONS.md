@@ -37,3 +37,9 @@ No ops portal, self-registration, user management, analytics charts, reports, PD
 
 ### D12. Cloud Run is a stretch goal (F10)
 Local `npm start` is the primary demo environment. Cloud Run in the same Firebase/GCP project comes only after all P0 items pass.
+
+### D13. `@types/node` bumped from ^20 to ^22 (agent decision, M0.1)
+`vitest@5` declares a peer range of `@types/node` `^22 || >=24`, so `npm install -D vitest` fails with ERESOLVE on `^20`. Bumping a type-only dev package is smaller and safer than pinning an older vitest or using `--legacy-peer-deps`. Runtime is unaffected (local Node is 24; the stretch Dockerfile's Node 20 does not read these types).
+
+### D14. Minimal lint fixes in copied UI files (agent decision, M0.1)
+`npm run check` must pass, but the copied UI had 8 ESLint errors. Fixed with the smallest possible edits and no behavior change: escaped two apostrophes on `/login`, replaced `any` with a `SessionUser` type in `AuthProvider` (UI.md allows this) and an `Escalation` type on the escalations page, moved two `useEffect` calls below the functions they call, and suppressed `react-hooks/set-state-in-effect` on three effects with a reason (each fetch function awaits before setting state, so the rule's warning is a false positive).

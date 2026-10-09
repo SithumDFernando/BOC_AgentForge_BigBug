@@ -22,7 +22,7 @@ export default function LoginSelectionPage() {
             </div>
             <h2 className="text-headline-sm font-semibold text-on-surface mb-3">End User Portal</h2>
             <p className="text-body-md text-on-surface-variant mb-6">
-              Access your company's secure AI agent to ask questions, check policies, and resolve HR/IT requests.
+              Access your company&apos;s secure AI agent to ask questions, check policies, and resolve HR/IT requests.
             </p>
             <div className="flex items-center text-primary font-label-ui font-semibold gap-1 group-hover:gap-2 transition-all">
               <span>Go to Portal</span>
@@ -40,7 +40,7 @@ export default function LoginSelectionPage() {
             </div>
             <h2 className="text-headline-sm font-semibold text-on-surface mb-3">Tenant Admin</h2>
             <p className="text-body-md text-on-surface-variant mb-6">
-              Manage your company's users, upload Knowledge Base documents, and monitor AI analytics & billing.
+              Manage your company&apos;s users, upload Knowledge Base documents, and monitor AI analytics & billing.
             </p>
             <div className="flex items-center text-secondary font-label-ui font-semibold gap-1 group-hover:gap-2 transition-all">
               <span>Admin Login</span>

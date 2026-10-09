@@ -2,8 +2,16 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
+export interface SessionUser {
+  userId: string;
+  role: 'admin' | 'user';
+  tenantId: string;
+  email?: string;
+  name?: string;
+}
+
 interface AuthContextValue {
-  user: any | null;
+  user: SessionUser | null;
   loading: boolean;
   signOutUser: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -17,7 +25,7 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function fetchSession() {
@@ -35,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null);
       }
-    } catch (e) {
+    } catch {
       setUser(null);
     } finally {
       setLoading(false);
@@ -43,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set only after the awaited fetch
     fetchSession();
     const refresh = () => { void fetchSession(); };
     window.addEventListener('focus', refresh);

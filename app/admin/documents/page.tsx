@@ -22,10 +22,6 @@ export default function AdminDocuments() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
 
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
-
   async function fetchDocuments() {
     try {
       const res = await fetch('/api/admin/documents');
@@ -39,6 +35,11 @@ export default function AdminDocuments() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set only after the awaited fetch
+    fetchDocuments();
+  }, []);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files || e.target.files.length === 0) return;

@@ -3,9 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/components/AuthProvider';
 
+interface Escalation {
+  id: string;
+  reason?: string;
+  userMessage?: string;
+  urgency?: string;
+  riskLevel?: string;
+  toolParameters?: unknown;
+}
+
 export default function AdminEscalations() {
   const { user, loading: authLoading } = useAuth();
-  const [escalations, setEscalations] = useState<any[]>([]);
+  const [escalations, setEscalations] = useState<Escalation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refresh, setRefresh] = useState(0);
   const [error, setError] = useState('');

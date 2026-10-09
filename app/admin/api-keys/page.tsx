@@ -23,10 +23,6 @@ export default function AdminApiKeys() {
   const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
   const [isRevoking, setIsRevoking] = useState(false);
 
-  useEffect(() => {
-    fetchKeys();
-  }, []);
-
   async function fetchKeys() {
     try {
       const res = await fetch('/api/admin/api-keys');
@@ -40,6 +36,11 @@ export default function AdminApiKeys() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set only after the awaited fetch
+    fetchKeys();
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
