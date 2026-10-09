@@ -1,127 +1,42 @@
 'use client';
-
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/app/components/AuthProvider';
-
-interface Escalation {
-  id: string;
-  reason?: string;
-  userMessage?: string;
-  urgency?: string;
-  riskLevel?: string;
-  toolParameters?: unknown;
-}
-
+import { useEffect, useState } from 'react';
+interface Ticket { id: string; userId?: string; customerName?: string; customerEmail?: string; reason?: string; userMessage?: string; reviewRule?: string; urgency?: string; status: string; createdAt?: string; decidedAt?: string; adminNote?: string }
 export default function AdminEscalations() {
-  const { user, loading: authLoading } = useAuth();
-  const [escalations, setEscalations] = useState<Escalation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [status, setStatus] = useState('pending');
   const [refresh, setRefresh] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
+  const [busy, setBusy] = useState<string>();
+  const [notes, setNotes] = useState<Record<string, string>>({});
   useEffect(() => {
-    async function loadEscalations() {
-      try {
-        console.log('Fetching escalations...');
-        const tId = user?.tenantId || 'tnt_sample01'; 
-        const res = await fetch(`/api/escalation?tenantId=${tId}&status=pending`);
-        console.log('Fetch response status:', res.status);
-        if (res.ok) {
-          const data = await res.json();
-          console.log('Fetched escalations:', data.escalations);
-          setEscalations(data.escalations || []);
-        }
-      } catch (e) {
-        console.error('Failed to load escalations:', e);
-      } finally {
-        setLoading(false);
-      }
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the view before each refetch; the fetch itself awaits
+    setLoading(true); setError('');
+    async function load() {
+      try { const res = await fetch(`/api/escalation?status=${status}`); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Unable to load tickets.'); if (!cancelled) setTickets(data.escalations || []); }
+      catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : 'Unable to load tickets.'); }
+      finally { if (!cancelled) setLoading(false); }
     }
-    loadEscalations();
-  }, [user, refresh]);
-
-  async function handleDecision(id: string, decision: 'approved' | 'rejected') {
-    try {
-      const res = await fetch('/api/escalation', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, decision, adminId: user?.userId })
-      });
-      if (res.ok) {
-        setEscalations(prev => prev.filter(e => e.id !== id));
-      } else {
-        setError((await res.json()).error || 'Unable to review ticket.');
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    void load(); return () => { cancelled = true; };
+  }, [status, refresh]);
+  async function decide(id: string, decision: 'approved' | 'rejected') {
+    setBusy(id); setError('');
+    try { const res = await fetch('/api/escalation', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, decision, adminNote: notes[id] || '' }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Unable to review ticket.'); setRefresh(r => r + 1); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Unable to save decision.'); }
+    finally { setBusy(undefined); }
   }
-
-  return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-headline-lg font-bold text-on-surface">Escalations Queue</h1>
-          <p className="text-on-surface-variant font-body-md mt-1">Human-in-the-loop review for agent actions lacking confidence.</p>
-        </div>
-        <button className="px-4 py-2 border rounded-lg" onClick={() => setRefresh(r => r + 1)}>Refresh tickets</button>
-      </div>
-      {error && <p role="alert" className="text-error mb-4">{error}</p>}
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <span className="material-symbols-outlined animate-spin text-[32px] text-primary">progress_activity</span>
-        </div>
-      ) : escalations.length === 0 ? (
-        <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-sm p-12 flex flex-col items-center justify-center text-center">
-          <div className="w-20 h-20 mx-auto rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant mb-6 border border-outline-variant/30">
-            <span className="material-symbols-outlined text-[40px]">task_alt</span>
-          </div>
-          <h2 className="text-headline-sm font-semibold text-on-surface mb-2">No Active Escalations</h2>
-          <p className="text-on-surface-variant text-sm max-w-md">
-            The AI agent is currently handling all queries within confidence thresholds. Any action requiring human review will appear here.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {escalations.map((esc) => (
-            <div key={esc.id} className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 shadow-sm">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="bg-error/10 text-error px-2 py-0.5 rounded text-xs font-semibold uppercase">{esc.urgency || esc.riskLevel || 'Medium'} RISK</span>
-                    <span className="text-sm font-medium text-on-surface-variant">ID: {esc.id}</span>
-                  </div>
-                  <h3 className="text-title-md font-semibold text-on-surface">Agent Escalation Request</h3>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => handleDecision(esc.id, 'rejected')}
-                    className="px-4 py-2 border border-outline-variant/30 rounded-lg text-error hover:bg-error/5 font-medium transition-colors"
-                  >
-                    Reject
-                  </button>
-                  <button 
-                    onClick={() => handleDecision(esc.id, 'approved')}
-                    className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90 font-medium transition-colors shadow-sm"
-                  >
-                    Approve
-                  </button>
-                </div>
-              </div>
-              
-              <div className="bg-surface-container-low p-4 rounded-lg font-mono text-sm text-on-surface overflow-x-auto whitespace-pre-wrap">
-                {esc.reason || JSON.stringify(esc.toolParameters, null, 2)}
-              </div>
-              {esc.userMessage && (
-                <div className="mt-4 text-sm text-on-surface-variant">
-                  <strong>User Message:</strong> {esc.userMessage}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <div className="p-8 text-on-surface">
+    <div className="flex flex-wrap justify-between gap-4 mb-6"><div><h1 className="text-headline-lg font-bold">Escalations Queue</h1><p className="text-on-surface-variant mt-2">Review customer requests that the website assistant cannot complete automatically.</p></div><button className="px-4 py-2 border rounded-lg" onClick={() => setRefresh(r => r + 1)}>Refresh tickets</button></div>
+    <div className="bg-surface-container-low rounded-xl p-5 mb-6"><h2 className="font-semibold">How manager review works</h2><p className="text-sm mt-2">A refund above LKR 50,000, a foreign-currency refund request, or a request for a manager creates a pending ticket. Check the customer’s request and the review reason, add your decision note, then approve or reject it.</p><p className="text-sm mt-2">The customer’s chat checks for your decision every five seconds. In this demo, approval records permission only: it does not issue a refund, charge a card, or automatically send an email.</p></div>
+    <label className="text-sm font-semibold" htmlFor="ticket-status">Show tickets</label><select id="ticket-status" className="ml-3 border rounded-lg p-2 mb-6 bg-surface" value={status} onChange={e => setStatus(e.target.value)}><option value="pending">Pending review</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
+    {error && <p role="alert" className="text-error mb-4">{error}</p>}
+    {loading ? <p role="status">Loading tickets…</p> : tickets.length === 0 ? <div className="border rounded-xl p-8"><h2 className="font-semibold">No {status} tickets</h2><p className="text-sm mt-2">To demonstrate this flow, ask the company’s assistant “I want a refund of LKR 75,000”, then refresh this queue. Use a separate browser profile for the customer session.</p></div> : <div className="space-y-5">{tickets.map(ticket => <article key={ticket.id} className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-6">
+      <div className="flex flex-wrap justify-between gap-3"><h2 className="font-semibold">{ticket.customerName || ticket.userId || 'Customer'} — review request</h2><span className="text-sm capitalize">{ticket.status} · {ticket.urgency || 'medium'} priority</span></div>
+      <p className="text-sm text-on-surface-variant mt-2">{ticket.customerEmail || ''} · Submitted {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : 'Unknown date'}</p><p className="text-xs break-all text-on-surface-variant mt-1">Customer ID: {ticket.userId || 'Unavailable'} · Ticket: {ticket.id}</p>
+      <h3 className="text-sm font-semibold mt-5">Customer request</h3><p className="bg-surface-container-low rounded-lg p-4 mt-2 whitespace-pre-wrap text-sm">{ticket.userMessage || ticket.reason || 'No request text recorded.'}</p>
+      <h3 className="text-sm font-semibold mt-4">Why this needs review</h3><p className="text-sm mt-2">{ticket.reviewRule || ticket.reason || 'The assistant requested a manager decision.'}</p>
+      {ticket.status === 'pending' ? <><label className="block text-sm font-semibold mt-4" htmlFor={`note-${ticket.id}`}>Decision note (optional)</label><textarea id={`note-${ticket.id}`} maxLength={1000} value={notes[ticket.id] || ''} onChange={e => setNotes(n => ({ ...n, [ticket.id]: e.target.value }))} className="w-full border rounded-lg bg-surface p-3 mt-2" placeholder="Explain the decision for the review record."/><div className="flex gap-3 mt-4"><button disabled={!!busy} onClick={() => void decide(ticket.id, 'rejected')} className="border rounded-lg px-4 py-2 text-error">Reject request</button><button disabled={!!busy} onClick={() => void decide(ticket.id, 'approved')} className="bg-primary text-on-primary rounded-lg px-4 py-2">Approve request</button>{busy === ticket.id && <span role="status">Saving…</span>}</div></> : <p className="text-sm mt-4">Decision recorded {ticket.decidedAt ? new Date(ticket.decidedAt).toLocaleString() : ''}. {ticket.adminNote || 'No note added.'}</p>}
+    </article>)}</div>}
+  </div>;
 }

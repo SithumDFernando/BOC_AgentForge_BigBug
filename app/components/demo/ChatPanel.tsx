@@ -32,7 +32,10 @@ export default function ChatPanel({ company, customerId, onClose, onBusy }: { co
     let result: Result = {};
     try {
       const res = await fetch(company === 'nova' ? '/api/demo/enterprise-chat' : '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, history: messages.map(m => ({ role: m.role, content: m.content })), requestId: crypto.randomUUID(), expectedCustomerId: customerId }), signal: abort.current.signal });
-      if (!res.ok) throw new Error((await res.json()).error || 'Unable to complete this request.');
+      if (!res.ok) {
+        const failure = await res.json().catch(() => null);
+        throw new Error(failure?.error || 'The assistant is temporarily unavailable. Please try again.');
+      }
       if (company === 'nova') result = await res.json();
       else {
         const reader = res.body?.getReader(); if (!reader) throw new Error('No chat response received.');
