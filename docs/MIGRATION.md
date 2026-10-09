@@ -16,6 +16,10 @@ The frontend, configs, policy files and demo data, unchanged except for the tena
 | `/api/demo/enterprise-chat` reading a plain key from Firestore; `VERCEL_PROJECT_PRODUCTION_URL` fallback | Server code is rebuilt, not copied; both conflict with D10 and D17 (D19) |
 | `/admin/users` customer-access changes, `/admin/agents`, analytics, reports, settings | Cut pages (D11) |
 | `walkwave/demo-runbook.md` | Its behavior notes are folded into UI.md and DEMO_RUNBOOK.md |
+| `122bfa4` embeddable website widget (`public/widget.js`, iframe, widget tokens, `/api/widget/*`, `/api/demo/widget-token`, `/api/admin/widget`, Company settings page, Nova switched to the widget) | SPEC lists "a universal embed script, cross-domain widgets" as out of scope, and its server half breaks rules we keep (a hard-coded JWT fallback secret, API keys looked up by plain value, a hard-coded Vercel origin). Pending a scope decision; if approved it is rebuilt to our rules, not copied |
+| `9f06ce9` docs page install instructions | Describe the widget above and a Vercel URL |
+
+**Second re-sync, 2026-10-10** (old repo `9f06ce9`): `app/globals.css` only. It drops the `prefers-color-scheme: dark` body colors, which turned the page background dark behind the light-themed components, and adds an unused `.integration-code` style for code blocks.
 
 | Copied | From |
 |---|---|

@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf8ff;
+  --foreground: #131b2e;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,17 +13,26 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.integration-code {
+  background: #0f172a;
+  color: #f1f5f9;
+  border: 1px solid #334155;
+  font-family: var(--font-geist-mono, ui-monospace), SFMono-Regular, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  color-scheme: dark;
+}
+
+.integration-code::selection,
+.integration-code *::selection {
+  background: #bae6fd;
+  color: #0f172a;
 }
 
 @theme inline {

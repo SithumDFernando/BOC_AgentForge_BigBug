@@ -11,7 +11,7 @@ The re-sync brought in the old repo's own truth pass: the public pages are now s
 | File | Status | Changes |
 |---|---|---|
 | `app/layout.tsx` | Edit | `metadata.description` → "AI customer support companies can trust." |
-| `app/globals.css` | Keep | — |
+| `app/globals.css` | Keep | Re-synced at `9f06ce9`: light theme only. `.integration-code` may be used for the docs page code blocks |
 | `app/components/AuthProvider.tsx` | Keep | Reads `GET /api/auth/session` → `{ user }`. Already typed with `SessionUser` (D14) |
 | `app/components/NavHeader.tsx` | Keep | Links: Overview (`/`), Integrations (`/#integrations`), Guide (`/docs`), and an "Admin login" button (`/admin/login`). No dead links |
 | `app/(public)/layout.tsx` | Keep | Footer: Integration guide, Data & privacy, Company admin, and "Hackathon prototype · Fictional company data". No version label or status pill |
