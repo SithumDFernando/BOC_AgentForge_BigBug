@@ -6,11 +6,22 @@ loadEnvConfig(process.cwd());
 
 const REQUIRED = ['FIREBASE_PROJECT_ID', 'WALKWAVE_ADMIN_PASSWORD', 'NOVA_ADMIN_PASSWORD', 'NOVA_DEMO_API_KEY'];
 
+// The seed indexes the policy documents, so it needs the embedding provider too.
+const EMBEDDING_ENV: Record<string, string[]> = {
+  vertex: ['GOOGLE_CLOUD_PROJECT', 'VERTEX_LOCATION', 'VERTEX_EMBEDDING_MODEL'],
+  openai: ['OPENAI_API_KEY', 'OPENAI_EMBEDDING_MODEL'],
+};
+
 function checkEnv() {
-  const required = process.env.FIREBASE_PRIVATE_KEY ? [...REQUIRED, 'FIREBASE_CLIENT_EMAIL'] : REQUIRED;
+  const provider = process.env.LLM_PROVIDER?.trim() ?? '';
+  const required = [
+    ...REQUIRED,
+    ...(process.env.FIREBASE_PRIVATE_KEY ? ['FIREBASE_CLIENT_EMAIL'] : []),
+    ...(EMBEDDING_ENV[provider] ?? ['LLM_PROVIDER']),
+  ];
   const missing = required.filter(name => !process.env[name]?.trim());
   if (missing.length) {
-    console.error(`Seed stopped. Missing env vars in .env.local: ${missing.join(', ')}`);
+    console.error(`Seed stopped. Missing env vars in .env.local (or .env): ${missing.join(', ')}`);
     console.error('See .env.example and docs/THIRD_PARTY_SETUP.md.');
     process.exit(1);
   }
@@ -24,6 +35,8 @@ async function main() {
   const { hashApiKey, hashPassword } = await import('@/lib/auth');
   const { demoCompanies } = await import('@/lib/demo-config');
   const { env } = await import('@/lib/env');
+  const { indexDocument } = await import('@/lib/knowledge');
+  const { readFile } = await import('node:fs/promises');
 
   const summary: string[] = [];
 
@@ -71,6 +84,19 @@ async function main() {
   await upsert('api_keys/nova_demo_key', {
     tenantId: 'tnt_nova', name: 'Nova server integration', keyHash: hashApiKey(novaKey), prefix: novaKey.slice(0, 7), isActive: true,
   }, { usageCount: 0, lastUsed: null, ...created });
+
+  // Fixed ids, so re-running replaces the chunks instead of adding new ones.
+  const policies = [
+    { docId: 'demo_walkwave_policy', tenantId: 'tnt_walkwave', title: 'Walkwave policies', file: 'data/walkwave/policies.md' },
+    { docId: 'demo_nova_policy', tenantId: 'tnt_nova', title: 'Nova Electronics policies', file: 'data/nova/policies.md' },
+  ];
+  for (const p of policies) {
+    const text = await readFile(p.file, 'utf8');
+    const doc = await indexDocument({
+      docId: p.docId, tenantId: p.tenantId, adminId: 'seed', title: p.title, filename: 'policies.md', fileSize: Buffer.byteLength(text), text,
+    });
+    summary.push(`indexed  documents/${doc.id} (${doc.chunkCount} chunks)`);
+  }
 
   console.log(summary.join('\n'));
   console.log(`\nSeed complete: ${summary.length} documents.`);

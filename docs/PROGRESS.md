@@ -8,7 +8,7 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 |---|---|---|
 | M0 Scaffold | done | n/a (no secrets needed) |
 | M1 Auth, data, seed | done (offline) | **no**: no `.env.local` yet |
-| M2 Knowledge | in progress | — |
+| M2 Knowledge | done (offline) | **no** |
 | M3 Chat core | not started | — |
 | M4 Enterprise API | not started | — |
 | M5 Admin features | not started | — |
@@ -27,10 +27,12 @@ The build agent updates this after every task (see the protocol in [TASKS.md](TA
 _Items built and unit-tested but not yet run against real Firestore, Vertex AI or SMTP._
 
 - M1.5: `npm run seed` twice against real Firestore (the second run should report only `updated`).
+- M2: `npm run seed` indexing both policies (needs the vector index), and uploading `public/demo/Walkwave_Policies.pdf` in the admin UI → indexed.
 - M1.4: successful admin login, the session route with a real account, and demo login against seeded users (needs Firestore).
 
 ## Log
 
+- 2026-10-10: M2.4 done; **M2 exit (offline) passed.** The seed indexes `data/walkwave/policies.md` and `data/nova/policies.md` through `indexDocument` with the fixed ids `demo_walkwave_policy` / `demo_nova_policy` (re-runs replace the chunks), and its env check now also requires the embedding provider's variables. `npm run check` passes (36 tests). The live upload is under "Needs live verification".
 - 2026-10-10: M2.3 done. `/api/admin/documents` GET/POST/DELETE (admin only, tenant from the session, 4 MB request guard, title ≤ 200 characters defaulting to the filename, `maxDuration` 60). Checked on the dev server: 401 without a session; with an admin token, `.png` → 400 "Please upload a PDF or TXT file.", an empty file → 400, a bad id → 400; `Walkwave_Policies.pdf` parsed and then failed at Firestore with a generic 500 (no credentials, see Blockers).
 - 2026-10-10: M2.2 done. `lib/knowledge.ts`: lazy PDF parsing (unreadable PDF → 400), chunking, `indexDocument` (embed first so a failure writes nothing; replaces old chunks of a fixed id; refuses another tenant's id; rolls back chunks if the document write fails), `listDocuments`, `deleteDocument` (document first, then chunks), `searchKnowledge` with a tenant-filtered cosine `findNearest` (distance ≤ 0.8, indexed docs only; logs a hint if the vector index is missing). `knowledge.test.ts`: 12 tests on an in-memory Firestore fake. A real `findNearest` needs the vector index (THIRD_PARTY_SETUP §2.7).
 - 2026-10-10: M2.1 done. `lib/log.ts` (structured JSON logs, `recordAction`) and `lib/llm.ts`: Vertex AI via `@google/genai` 2.28 (new dependency, D21) and OpenAI, tool calls in both provider formats, Gemini's raw content replayed for thought signatures, 1 retry on 429/5xx/network, OpenAI fallback for `generate` only, 768-dim embeddings with batching and a length check. Output cap 1024 tokens (D29). `lib/env.ts` gained the Vertex names. `llm.test.ts`: 10 tests with mocked SDKs. Not yet run against real Vertex AI (needs a project).
