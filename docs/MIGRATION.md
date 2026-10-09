@@ -1,43 +1,33 @@
-# Porting from the old BOC-2.0 repo
+# Relationship to the old repo
 
-The old repo (`BOC-2.0/my-app`) is public and contains leaked credentials. **Copy files by hand. Never copy `.env*`, `credentials.txt`, or git history.** Every secret is regenerated for this repo.
+The old repo (`BOC-2.0/my-app`) is public and contains leaked credentials. **Never copy `.env*`, `credentials.txt`, or git history from it.** Every secret here is new.
 
-## Bring over (then modify as noted)
+## Already copied into this repo (2026-10-10)
 
-| Old path | New path | Changes |
-|---|---|---|
-| `app/(public)/page.tsx`, `architecture`, `security`, `pricing` | same | Remove forbidden claims ([SECURITY.md](SECURITY.md)); architecture page follows [ARCHITECTURE.md](ARCHITECTURE.md) Part A vs. B |
-| `app/(public)/layout.tsx`, `app/layout.tsx`, `app/globals.css`, `app/components/{NavHeader,ConditionalShell,AnimatedShader,PageBreadcrumb,AuthProvider}.tsx` | same | Remove links to deleted routes |
-| `app/walkwave`, `app/nova`, `app/components/demo/*` | same | Nova calls `/api/nova/chat` |
-| `app/admin/{layout,login,dashboard,documents,escalations,api-keys}` + `AdminSidebar.tsx` | same | Hide sidebar entries for pages not ported |
-| `app/api/auth/{admin-login,logout,session}`, `app/api/demo/login` | same | Use `lib/auth` helpers |
-| `app/api/chat`, `app/api/escalation`, `app/api/escalation/[id]`, `app/api/v1/chat` | same | firebase-admin; return JSON instead of an event stream (no streaming) |
-| `app/api/demo/enterprise-chat` | `app/api/nova/chat` | `APP_BASE_URL` |
-| `app/api/admin/{documents,api-keys,stats}` | same | Hash API keys; stats must be real counts |
-| `lib/chat-service.ts` | `lib/chat.ts` | Add guardrails; recipient allowlist; model has no tools |
-| `lib/knowledge.ts` | `lib/knowledge.ts` | Pinecone → `knowledge_chunks` + cosine search |
-| `lib/rag.ts` | `lib/llm.ts` | Rewrite: `generate()` / `embed()` on OpenAI; delete the Gemini function declarations |
-| `lib/tools.ts` | `lib/orders.ts`, `lib/email.ts`, `lib/escalations.ts` | Split; drop `generateReport`, `queryDatabase`, `companyDatabase` |
-| `lib/guardrails.ts` | `lib/guardrails.ts` | Keep the input part (injection + PII); drop the output/tool-detect part |
-| `lib/session.ts`, `middleware.ts` | `lib/auth.ts`, `middleware.ts` | No fallback secret; throw if `JWT_SECRET` is missing |
-| `lib/firebase.ts` | `lib/db.ts` | firebase-admin |
-| `lib/demo-config.ts` | same | New tenant IDs |
-| `scripts/setup-demo.cjs`, `verify-demo.cjs` | `scripts/seed.ts`, `scripts/verify.ts` | firebase-admin + OpenAI; don't write secrets into `.env.local` |
-| `public/demo/*`, `public/images/*`, `public/videos/*` | same | — |
-| `../walkwave/policies.md`, `website-content.md` | `data/walkwave/` | Seed source |
+The frontend, configs, policy files and demo data, unchanged except for the tenant IDs in `lib/demo-config.ts` (`tnt_walkwave`, `tnt_nova`). The file-by-file list and required edits are in [UI.md](UI.md).
 
-## Do not bring over
+| Copied | From |
+|---|---|
+| `app/` pages and components | `my-app/app/` |
+| `lib/demo-config.ts` | `my-app/lib/demo-config.ts` |
+| `public/demo/*` (policy PDF/TXT) | `my-app/public/demo/` |
+| `data/walkwave/*` | `BOC-2.0/walkwave/` |
+| `data/nova/policies.md` | `my-app/public/demo/Nova_Electronics_Policies.txt` |
+| `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`, `eslint.config.mjs` | `my-app/` |
 
-`_legacy_routes/`, `app/ops/**`, `app/portal/**`, `app/shader`, `app/(public)/demo`, `app/(public)/docs`, `app/admin/{agents,analytics,reports,settings,users}`, `app/api/{agent,architecture,dev-seed,seed,fleet,kb,traces,report,ops/**,auth/ops-login,auth/user-*,admin/{agents,analytics,reports,settings,users}}`, `lib/{bigquery,pubsub,cloud-logging,secret-manager,trace-logger,request-validation}.ts`, `scripts/setup-{cloudwatch,dynamodb,sqs}.js`, `fix-*.js`, `migrate.js`, `add-fonts.js`, `extract-layout.js`, `seed_external.mjs`, `test_embed.js`, the root-level proposal and report markdown, `ui/*.html`, `credentials.txt`.
+## Server code: rebuild, don't copy
 
-Dependencies to drop: `@aws-sdk/*`, `@google/generative-ai`, `@pinecone-database/pinecone`, `firebase` (client), `recharts` (unless the P1 dashboard needs it).
-Dependencies to add: `openai`, `firebase-admin`.
+All of `lib/` (except `demo-config.ts`), every `app/api/**` route, `middleware.ts` and `scripts/` are built new from [API.md](API.md) and [MODULES.md](MODULES.md), following [TASKS.md](TASKS.md). The old code used the Firebase browser SDK, Gemini and Pinecone, so it can't be reused directly.
 
-## Port order
+If you have access to the old repo, these files are useful **reference only** (behavior they got right):
 
-1. Scaffold the repo, `lib/db.ts`, `lib/auth.ts`, `middleware.ts`, then the seed script. Verify login works.
-2. `lib/llm.ts`, `lib/knowledge.ts`, document upload (F1).
-3. `lib/chat.ts` + `/api/chat` + Walkwave widget (F2–F5, F7).
-4. `/api/v1/chat` + Nova (F6).
-5. Admin escalations and API keys (F5, F8).
-6. Public pages cleanup (F9).
+| Old file | Useful for |
+|---|---|
+| `my-app/lib/chat-service.ts` | Intent regexes, order reply wording, email idempotency with a transaction |
+| `my-app/lib/knowledge.ts` | pdf-parse v2 usage (`new PDFParse({ data }).getText()` + `destroy()`), chunk sizes |
+| `my-app/app/api/escalation/route.ts` | Tenant-scoped ticket decisions |
+| `my-app/app/api/v1/chat/route.ts` | Customer-belongs-to-key's-tenant check |
+
+## Not carried over
+
+AWS libraries and scripts, Gemini/Pinecone code, `trace-logger`, the ops and portal areas, legacy routes, `fix-*.js` scripts, the seed/dev-seed routes, the old proposal and report markdown, `ui/*.html` mockups, and the images and video in `public/` (no page uses them; take them from the old repo for the pitch deck if you need them).

@@ -56,11 +56,13 @@ A tenant has fewer than about 200 chunks. Each query loads that tenant's chunks 
 | `demo_orders/{orderId}` | tenantId, customerId, productName, shippingStatus, trackingNumber, estimatedDelivery, totalAmount, currency | seed |
 | `documents/{docId}` | tenantId, title, filename, status, chunkCount, createdAt | upload |
 | `knowledge_chunks/{docId_i}` | tenantId, docId, title, content, embedding (number[]) | upload |
-| `escalations/{tenant_user_requestId}` | tenantId, userId, reason, amount, status, adminId, adminNote, decidedAt | chat / admin |
+| `escalations/{tenant_user_requestId}` | tenantId, userId, reason, userMessage, amount, urgency, status, adminId, adminNote, decidedAt, createdAt | chat / admin |
 | `api_keys/{id}` | tenantId, name, keyHash, prefix, isActive, usageCount, lastUsed | admin / seed |
 | `email_requests/{tenant_user_requestId}` | status | chat |
-| `chat_history/{auto}` | tenantId, userId, message, reply, actions, createdAt | chat |
+| `chat_history/{auto}` | tenantId, userId, message (PII-scrubbed), reply, actions, tokens, createdAt | chat |
 | `agent_actions/{auto}` | tenantId, userId, type, status, details, createdAt | all actions |
+
+No composite indexes are needed: every query uses equality filters only, and sorting happens in memory.
 
 Firestore rules: `allow read, write: if false;` on everything. Only the server, using the Admin SDK, can read or write.
 

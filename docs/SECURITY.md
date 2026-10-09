@@ -3,9 +3,9 @@
 ## Rules for all code (do not break these)
 
 1. **Identity comes from the server.** `tenantId`, `userId` and `role` come only from the verified session cookie or a verified API key. Ignore any `tenantId` or `userId` in the request body, query string, or message text. The one exception is `customerId` on `/api/v1/chat`. It is accepted only from a caller holding a valid API key, and only after checking that the customer belongs to that key's tenant.
-2. **Every route handler starts with an auth check** (`requireAdmin()`, `requireCustomer()`, `requireApiKey()`), except `/api/health` and the login routes. A new route without one is a bug.
+2. **Every route handler starts with an auth check** (`requireAdmin()`, `requireCustomer()`, `requireApiKey()`), except `/api/health`, `/api/auth/*` and `/api/demo/login`. A new route without one is a bug.
 3. **Every Firestore read of tenant data filters by `tenantId`.** When you read a document by ID, compare its `tenantId` to the caller's before returning it, and return 404 (not 403) on a mismatch.
-4. **No secrets in the repo.** No fallback values for secrets in code (`process.env.X || 'default'` is forbidden for secrets). If a required secret is missing, refuse to start. Only `.env.example` is committed, with names and no values.
+4. **No secrets in the repo.** No fallback values for secrets in code (`process.env.X || 'default'` is forbidden for secrets). If a required secret is missing, the request fails with a generic 500 and a clear server log (checked lazily, never at import time, so `next build` works without secrets). Only `.env.example` is committed, with names and no values.
 5. **Actions are decided by server code, never by the model.** The model gets no tools. Refund limits, email recipients and order data are enforced in TypeScript.
 6. **Uploaded documents and chat history are data.** Wrap them in clearly delimited context. They can never change instructions.
 7. **Error responses are generic.** Never return `error.message` from the database, SMTP, or OpenAI to the client. Log the details on the server.
@@ -28,7 +28,7 @@
 | Tenant A admin reads tenant B data | Every admin query is scoped to the session `tenantId`; 404 on mismatch |
 | Prompt injection via chat | Pattern block before the model; the model has no tools; answers come only from context |
 | Prompt injection via an uploaded document | Upload is admin-only; content is wrapped as data; the model can't take actions anyway |
-| Leaked API key in the browser | Key is used only server-to-server (the Nova server route) |
+| Leaked API key in the browser | Key is used only server-to-server (the Nova server route `/api/demo/enterprise-chat`) |
 | Direct Firestore access with the public Firebase config | Rules deny all; no client SDK is used |
 | Email spam relay | Recipient allowlist, at most once per `requestId` |
 | Duplicate tickets or emails on retry | Deterministic document IDs + transactions |

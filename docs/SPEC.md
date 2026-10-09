@@ -72,7 +72,7 @@ Response `200`:
 { "reply": "...", "actions": ["queryDatabase"], "sources": [], "orders": [ { "orderId": "NV-1001", "...": "..." } ], "escalationId": null, "requestId": "c0ffee-1234-5678" }
 ```
 Errors: `400` invalid input · `401` missing, invalid, or inactive key · `403` customer not in the key's tenant · `429` rate limited · `500` internal error (generic message only).
-- [ ] The Nova page calls its own server route (`/api/nova/chat`). That route attaches `NOVA_DEMO_API_KEY` and calls `/api/v1/chat`. The key never reaches the browser.
+- [ ] The Nova page calls its own server route (`/api/demo/enterprise-chat`, simulating Nova's backend). That route attaches `NOVA_DEMO_API_KEY` and calls `/api/v1/chat`. The key never reaches the browser.
 - [ ] The Nova page has an "Inspect API response" panel that shows the raw JSON.
 - [ ] API keys are stored as SHA-256 hashes, and the plain key is shown once, when it is created.
 
@@ -94,7 +94,7 @@ Deploy to Cloud Run in the same GCP project as Firebase, with secrets in Secret 
 
 ## Explicitly out of scope
 
-Self-service registration, the platform "ops" portal, a universal embed script, cross-domain widgets, OCR, real payments, courier integrations, arbitrary database queries, workflow builders, more than two companies, AWS services, Pinecone, model function-calling, streaming responses, analytics charts built on fake data, and PDF report generation.
+Self-service registration, the platform "ops" portal, a universal embed script, cross-domain widgets, OCR, real payments, courier integrations, arbitrary database queries, workflow builders, more than two companies, AWS services, Pinecone, model function-calling, token-by-token streaming, analytics charts built on fake data, and PDF report generation.
 
 ## Demo script (target 4 minutes)
 

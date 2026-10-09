@@ -21,10 +21,17 @@ npm run dev                  # http://localhost:3000
 
 | Doc | What's in it |
 |---|---|
+| [CLAUDE.md](CLAUDE.md) | Start here: rules for AI assistants and contributors, doc reading order |
 | [docs/SPEC.md](docs/SPEC.md) | Scope, features, acceptance criteria, demo script |
+| [docs/TASKS.md](docs/TASKS.md) | Build plan and autonomous working protocol |
+| [docs/PROGRESS.md](docs/PROGRESS.md) | Build status and blockers |
+| [docs/API.md](docs/API.md) | Every API route and its contract |
+| [docs/MODULES.md](docs/MODULES.md) | Server module design, chat routing rules, prompt |
+| [docs/UI.md](docs/UI.md) | Frontend inventory and required edits |
+| [docs/TESTING.md](docs/TESTING.md) | Unit and live verification cases |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Settled design decisions |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | What runs today vs. the target Google Cloud design |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security rules, threat model, known limitations, forbidden claims |
 | [docs/THIRD_PARTY_SETUP.md](docs/THIRD_PARTY_SETUP.md) | Firebase, OpenAI, Gmail, optional Cloud Run setup |
 | [docs/DEMO_RUNBOOK.md](docs/DEMO_RUNBOOK.md) | Stage checklist and backup plan |
-| [docs/MIGRATION.md](docs/MIGRATION.md) | What was ported from the previous repo |
-| [CLAUDE.md](CLAUDE.md) | Rules for AI assistants and contributors |
+| [docs/MIGRATION.md](docs/MIGRATION.md) | What came from the previous repo |
